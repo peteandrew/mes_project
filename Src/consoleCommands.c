@@ -24,6 +24,7 @@ static eCommandResult_T ConsoleCommandLEDToggle(const char buffer[]);
 static eCommandResult_T ConsoleCommandFlashDeviceId(const char buffer[]);
 static eCommandResult_T ConsoleCommandRecordAudio(const char buffer[]);
 static eCommandResult_T ConsoleCommandPlayAudio(const char buffer[]);
+static eCommandResult_T ConsoleCommandPlayAudioFromFlash(const char buffer[]);
 static eCommandResult_T ConsoleCommandStopAudio(const char buffer[]);
 static eCommandResult_T ConsoleCommandSetAudioClipNum(const char buffer[]);
 static eCommandResult_T ConsoleCommandGetAudioClipNum(const char buffer[]);
@@ -43,6 +44,7 @@ static const sConsoleCommandTable_T mConsoleCommandTable[] =
     {"flashid", &ConsoleCommandFlashDeviceId, HELP("Read SPI Flash device ID")},
     {"record", &ConsoleCommandRecordAudio, HELP("Recprd audio clip")},
     {"play", &ConsoleCommandPlayAudio, HELP("Play audio clip")},
+    {"playflash", &ConsoleCommandPlayAudioFromFlash, HELP("Play audio clip from Flash")},
     {"stop", &ConsoleCommandStopAudio, HELP("Stop audio playback")},
     {"clipset", &ConsoleCommandSetAudioClipNum, HELP("Set audio clip number")},
     {"clipget", &ConsoleCommandGetAudioClipNum, HELP("Get audio clip number")},
@@ -173,6 +175,20 @@ static eCommandResult_T ConsoleCommandPlayAudio(const char buffer[])
 
   appPlayAudio();
   ConsoleIoSendString("Playing audio clip");
+  ConsoleIoSendString(STR_ENDLINE);
+
+  return result;
+}
+
+
+static eCommandResult_T ConsoleCommandPlayAudioFromFlash(const char buffer[])
+{
+  eCommandResult_T result = COMMAND_SUCCESS;
+
+    IGNORE_UNUSED_VARIABLE(buffer);
+
+  appPlayAudioFromFlash();
+  ConsoleIoSendString("Playing audio clip from Flash");
   ConsoleIoSendString(STR_ENDLINE);
 
   return result;

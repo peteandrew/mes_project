@@ -10,6 +10,7 @@ void appToggleLED(void);
 uint16_t appFlashReadDeviceId(void);
 void appRecordAudio(void);
 void appPlayAudio(void);
+void appPlayAudioFromFlash(void);
 void appStopAudio(void);
 void appSetAudioClipNum(uint8_t audioClipNum);
 uint8_t appGetAudioClipNum(void);

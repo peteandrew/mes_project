@@ -14,6 +14,9 @@
 #define CLIP_SIZE     16000 // Size of clip buffer in half words (1 second of audio at 16 kHz sample rate == 16000 half words == 31KiB)
 #define BUFFER_SIZE   256   // Size of input/output buffer in half words (256 half words == 0.5KiB)
 
+#define FLASH_PLAY_START_POS  5000  // Index in half words
+#define FLASH_PLAY_END_POS    10000
+
 
 I2S_HandleTypeDef *i2sMic;
 I2S_HandleTypeDef *i2sDAC;
@@ -29,7 +32,10 @@ volatile bool recording;
 volatile uint16_t sampleIdx;
 
 int8_t audioClip = 1;
+int16_t clipPos = 0;  // Byte offset into audio clip for playback from Flash
 
+// 1 - play from RAM, 2 - play from Flash
+int8_t audioType = 1;
 
 
 
@@ -58,6 +64,8 @@ void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s)
 }
 
 
+void flashReadDataOffset(uint8_t blockIdx, uint8_t *data, uint16_t offset, uint16_t length);
+
 void processData()
 {
   int16_t sample;
@@ -69,6 +77,20 @@ void processData()
   if (recording) {
     increment = 4;
   }
+
+  if (audioType == 2 && !recording) {
+    // Here we read the next chunk of audio clip data from Flash (enough to fill half the buffer)
+    // The offset into the audio clip in bytes is given by clipPos
+    // We read BUFFER_SIZE/2 bytes so BUFFER_SIZE/4 sample (samples are 16 bits each)
+    // This is enough to fill half the buffer as each sample is duplicated for left and right channels
+    flashReadDataOffset(audioClip - 1, (uint8_t *) audio, clipPos, BUFFER_SIZE/2);
+    clipPos += BUFFER_SIZE/2;
+    // Multiple start and end pos by 2 as these values are defined as 16 bit sample indexes
+    if (clipPos > FLASH_PLAY_END_POS*2) {
+      clipPos = FLASH_PLAY_START_POS*2;
+    }
+  }
+
   for (uint16_t i = 0; i < (BUFFER_SIZE/2) - 1; i += increment) {
     if (recording) {
       // Only MIC left channel has data so we skip the right channel
@@ -82,13 +104,24 @@ void processData()
       bufferPtr[i + 1] = sample;
     }
 
-    if (++sampleIdx > 16000) {
-      sampleIdx = 0;
-      if (recording) {
-        recording = false;
-        HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
-        // Stop recoding audio
-        HAL_I2S_DMAStop(i2sMic);
+    sampleIdx++;
+    if (audioType == 1) {
+      if (sampleIdx > 16000) {
+        sampleIdx = 0;
+        if (recording) {
+          recording = false;
+          HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+          // Stop recoding audio
+          HAL_I2S_DMAStop(i2sMic);
+        }
+      }
+    } else if (audioType == 2) {
+      // Reset sampleIdx back to 0 on last iteration for Flash play
+      // We always use the same BUFFER_SIZE/4 samples and replace these
+      // on each call to processData
+      // This could maybe be moved out of the loop
+      if (sampleIdx >= (BUFFER_SIZE/4)) {
+        sampleIdx = 0;
       }
     }
   }
@@ -156,15 +189,26 @@ void appRecordAudio(void)
   HAL_I2S_DMAStop(i2sDAC);
   // Start recording audio
   // Receiving 32bit frames and buffer uses 16bit data size so receive size is half buffer size
-  HAL_I2S_Receive_DMA(i2sMic, (uint16_t *) buffer, BUFFER_SIZE/2);
+  audioType = 1;
   sampleIdx = 0;
   recording = true;
+  HAL_I2S_Receive_DMA(i2sMic, (uint16_t *) buffer, BUFFER_SIZE/2);
 }
 
 
 void appPlayAudio(void)
 {
+  audioType = 1;
   sampleIdx = 0;
+  HAL_I2S_Transmit_DMA(i2sDAC, (uint16_t *) buffer, BUFFER_SIZE);
+}
+
+
+void appPlayAudioFromFlash(void)
+{
+  audioType = 2;
+  sampleIdx = 0;
+  clipPos = FLASH_PLAY_START_POS*2;
   HAL_I2S_Transmit_DMA(i2sDAC, (uint16_t *) buffer, BUFFER_SIZE);
 }
 
@@ -279,6 +323,30 @@ void flashWriteData(uint8_t blockIdx, uint8_t *data, uint16_t size)
 void flashReadData(uint8_t blockIdx, uint8_t *data, uint16_t length)
 {
   uint32_t address24 = blockIdxToAddress(blockIdx);
+
+  uint8_t bufferOut[4];
+  bufferOut[0] = CMD_READ;
+  bufferOut[1] = (address24 >> 16) & 0xFF;
+  bufferOut[2] = (address24 >> 8) & 0xFF;
+  bufferOut[3] = address24 & 0xFF;
+
+  HAL_GPIO_WritePin(SPI_NSS_GPIO_Port, SPI_NSS_Pin, GPIO_PIN_RESET);
+  if (HAL_SPI_Transmit(spiFlash, bufferOut, sizeof(bufferOut), 1000) !=HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_SPI_Receive(spiFlash, data, length, 1000) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  HAL_GPIO_WritePin(SPI_NSS_GPIO_Port, SPI_NSS_Pin, GPIO_PIN_SET);
+}
+
+
+void flashReadDataOffset(uint8_t blockIdx, uint8_t *data, uint16_t offset, uint16_t length)
+{
+  uint32_t address24 = blockIdxToAddress(blockIdx);
+  address24 += offset;
 
   uint8_t bufferOut[4];
   bufferOut[0] = CMD_READ;
