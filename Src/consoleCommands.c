@@ -30,6 +30,7 @@ static eCommandResult_T ConsoleCommandGetAudioClipNum(const char buffer[]);
 static eCommandResult_T ConsoleCommandStoreAudio(const char buffer[]);
 static eCommandResult_T ConsoleCommandLoadAudio(const char buffer[]);
 static eCommandResult_T ConsoleCommandOutputAudioData(const char buffer[]);
+static eCommandResult_T ConsoleCommandPrintAddresses(const char buffer[]);
 
 
 static const sConsoleCommandTable_T mConsoleCommandTable[] =
@@ -49,6 +50,7 @@ static const sConsoleCommandTable_T mConsoleCommandTable[] =
     {"store", &ConsoleCommandStoreAudio, HELP("Store audio data")},
     {"load", &ConsoleCommandLoadAudio, HELP("Load audio data")},
     {"output", &ConsoleCommandOutputAudioData, HELP("Output audio data")},
+    {"addresses", &ConsoleCommandPrintAddresses, HELP("Print addresses")},
 
   CONSOLE_COMMAND_TABLE_END // must be LAST
 };
@@ -282,6 +284,24 @@ static eCommandResult_T ConsoleCommandOutputAudioData(const char buffer[])
     ConsoleSendParamHexUint16((uint16_t)data[i]);
     ConsoleIoSendString(STR_ENDLINE);
   }
+
+  return result;
+}
+
+
+static eCommandResult_T ConsoleCommandPrintAddresses(const char buffer[])
+{
+  eCommandResult_T result = COMMAND_SUCCESS;
+
+    IGNORE_UNUSED_VARIABLE(buffer);
+
+  volatile int stackPointer;
+  __asm__ __volatile__ ("mov %0, sp" : "=r"(stackPointer));
+  ConsoleIoSendString(STR_ENDLINE);
+  ConsoleIoSendString("0x");
+  ConsoleSendParamHexUint16(stackPointer >> 16);
+  ConsoleSendParamHexUint16(stackPointer & 0xFFFF);
+  ConsoleIoSendString(STR_ENDLINE);
 
   return result;
 }
