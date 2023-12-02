@@ -14,6 +14,8 @@ void appPlayAudioFromFlash(void);
 void appStopAudio(void);
 void appSetAudioClipNum(uint8_t audioClipNum);
 uint8_t appGetAudioClipNum(void);
+void appSetAudioStartSample(uint16_t startSample);
+void appSetAudioEndSample(uint16_t startSample);
 void appStoreAudio(void);
 void appLoadAudio(void);
 int16_t * appOutputAudioData(void);

@@ -28,6 +28,8 @@ static eCommandResult_T ConsoleCommandPlayAudioFromFlash(const char buffer[]);
 static eCommandResult_T ConsoleCommandStopAudio(const char buffer[]);
 static eCommandResult_T ConsoleCommandSetAudioClipNum(const char buffer[]);
 static eCommandResult_T ConsoleCommandGetAudioClipNum(const char buffer[]);
+static eCommandResult_T ConsoleCommandSetAudioStartSample(const char buffer[]);
+static eCommandResult_T ConsoleCommandSetAudioEndSample(const char buffer[]);
 static eCommandResult_T ConsoleCommandStoreAudio(const char buffer[]);
 static eCommandResult_T ConsoleCommandLoadAudio(const char buffer[]);
 static eCommandResult_T ConsoleCommandOutputAudioData(const char buffer[]);
@@ -48,6 +50,8 @@ static const sConsoleCommandTable_T mConsoleCommandTable[] =
     {"stop", &ConsoleCommandStopAudio, HELP("Stop audio playback")},
     {"clipset", &ConsoleCommandSetAudioClipNum, HELP("Set audio clip number")},
     {"clipget", &ConsoleCommandGetAudioClipNum, HELP("Get audio clip number")},
+    {"startsample", &ConsoleCommandSetAudioStartSample, HELP("Set start sample")},
+    {"endsample", &ConsoleCommandSetAudioEndSample, HELP("Set start sample")},
     {"store", &ConsoleCommandStoreAudio, HELP("Store audio data")},
     {"load", &ConsoleCommandLoadAudio, HELP("Load audio data")},
     {"output", &ConsoleCommandOutputAudioData, HELP("Output audio data")},
@@ -219,7 +223,7 @@ static eCommandResult_T ConsoleCommandSetAudioClipNum(const char buffer[])
     return result;
   }
 
-  if (parameterInt < 0 || parameterInt > 50)
+  if (parameterInt < 1 || parameterInt > 50)
   {
     ConsoleIoSendString(STR_ENDLINE);
     ConsoleIoSendString("Audio clip number must be 1-50");
@@ -246,6 +250,60 @@ static eCommandResult_T ConsoleCommandGetAudioClipNum(const char buffer[])
   ConsoleIoSendString(STR_ENDLINE);
   ConsoleIoSendString("Audio clip number: ");
   ConsoleSendParamUInt8(audioClipNum);
+  ConsoleIoSendString(STR_ENDLINE);
+
+  return result;
+}
+
+
+static eCommandResult_T ConsoleCommandSetAudioStartSample(const char buffer[])
+{
+  int16_t parameterInt;
+  eCommandResult_T result;
+  result = ConsoleReceiveParamInt16(buffer, 1, &parameterInt);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+
+  if (parameterInt < 0 || parameterInt > 16000)
+  {
+    ConsoleIoSendString(STR_ENDLINE);
+    ConsoleIoSendString("Audio start sample must be 0-16000");
+    ConsoleIoSendString(STR_ENDLINE);
+    return COMMAND_PARAMETER_ERROR;
+  }
+
+  appSetAudioStartSample((uint16_t)parameterInt);
+  ConsoleIoSendString(STR_ENDLINE);
+  ConsoleIoSendString("Audio start sample set");
+  ConsoleIoSendString(STR_ENDLINE);
+
+  return result;
+}
+
+
+static eCommandResult_T ConsoleCommandSetAudioEndSample(const char buffer[])
+{
+  int16_t parameterInt;
+  eCommandResult_T result;
+  result = ConsoleReceiveParamInt16(buffer, 1, &parameterInt);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+
+  if (parameterInt < 0 || parameterInt > 16000)
+  {
+    ConsoleIoSendString(STR_ENDLINE);
+    ConsoleIoSendString("Audio end sample must be 0-16000");
+    ConsoleIoSendString(STR_ENDLINE);
+    return COMMAND_PARAMETER_ERROR;
+  }
+
+  appSetAudioEndSample((uint16_t)parameterInt);
+  ConsoleIoSendString(STR_ENDLINE);
+  ConsoleIoSendString("Audio end sample set");
   ConsoleIoSendString(STR_ENDLINE);
 
   return result;

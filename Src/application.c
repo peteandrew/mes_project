@@ -73,6 +73,18 @@ uint8_t appGetAudioClipNum(void)
 }
 
 
+void appSetAudioStartSample(uint16_t startSample)
+{
+  audioSetStartSample(startSample);
+}
+
+
+void appSetAudioEndSample(uint16_t endSample)
+{
+  audioSetEndSample(endSample);
+}
+
+
 void appStoreAudio(void)
 {
   audioStore();

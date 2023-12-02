@@ -5,11 +5,8 @@
 #include "main.h"
 
 
-// Create struct to store channel parameters
-// Attributes for: clip number, start offset (in samples), end offset, current offset
-// Create array of audio channel states
-// When state is record or play from RAM, use only first channel
-// When state is play from Flash use all channels
+
+// Add playback of other channels
 
 // Add functions to set channel parameters
 
@@ -22,8 +19,7 @@
 // Only the top 24bits of the left channel contains audio data, the right channel is silent
 #define I2S_BUFFER_SIZE   256 // Size of I2S buffer in half words (256 half words == 0.5KiB)
 
-#define FLASH_PLAY_START_POS  5000  // Index in samples
-#define FLASH_PLAY_END_POS    10000
+#define NUM_CHANNELS  3
 
 
 static I2S_HandleTypeDef *i2sMic;
@@ -35,17 +31,22 @@ static int16_t buffer[I2S_BUFFER_SIZE];
 static volatile int16_t *bufferPtr = &buffer[0];
 static volatile bool readyForData;
 
-static volatile uint16_t sampleIdx;
-
-static int8_t audioClip = 1;
-static int16_t clipPos = 0;  // Offset into audio clip in samples for playback from Flash
-
 typedef enum {
   AUDIO_RECORD      = 0u,
   AUDIO_RAM_PLAY    = 0x01u,
   AUDIO_FLASH_PLAY  = 0x10u
 } eAudioState_T;
 static eAudioState_T audioState = AUDIO_RAM_PLAY;
+
+typedef struct {
+  uint8_t clipNum;
+  uint16_t startSample;
+  uint16_t endSample;
+  uint16_t currentSample;
+} ChannelParams_T;
+// When state is record or play from RAM, use only first channel
+// When state is play from Flash use all channels
+static ChannelParams_T channelParams[NUM_CHANNELS];
 
 
 void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef *hi2s)
@@ -80,6 +81,13 @@ void audioInit(I2S_HandleTypeDef *i2sMicH, I2S_HandleTypeDef *i2sDACH)
 {
   i2sMic = i2sMicH;
   i2sDAC = i2sDACH;
+
+  for (int i=0; i < NUM_CHANNELS; i++) {
+    channelParams[i].clipNum = 1;
+    channelParams[i].startSample = 0;
+    channelParams[i].endSample = CLIP_SAMPLES - 1;
+    channelParams[i].currentSample = 0;
+  }
 }
 
 
@@ -97,17 +105,29 @@ void audioProcessData(void)
   if (audioState == AUDIO_RECORD) {
     increment = 4;
   }
+  int8_t channelIdx = 0;
+  // Sample index in to audio.
+  // Follows channelParams.currentSample for RAM recording and playback as we use entire contents of audio.
+  // Set back to 0 for playback from Flash as we only use I2S_BUFFER_SIZE/4 * NUM_CHANNELS of audio.
+  int16_t ramSampleIdx = 0;
 
   if (audioState == AUDIO_FLASH_PLAY) {
     // Here we read the next chunk of audio clip data from Flash (enough to fill half the buffer)
-    // The offset into the audio clip in bytes is given by clipPos (in samples) x 2
+    // The offset into the audio clip in bytes is given by currentSample x 2
     // We read I2S_BUFFER_SIZE/2 bytes so I2S_BUFFER_SIZE/4 samples (samples are 16 bits each)
     // This is enough to fill half the buffer as each sample is duplicated for left and right channels
-    flashReadDataOffset(audioClip - 1, (uint8_t *) audio, clipPos * 2, I2S_BUFFER_SIZE/2);
-    clipPos += I2S_BUFFER_SIZE/4;
-    if (clipPos > FLASH_PLAY_END_POS) {
-      clipPos = FLASH_PLAY_START_POS;
+    flashReadDataOffset(
+        channelParams[channelIdx].clipNum - 1,
+        (uint8_t *) audio,
+        channelParams[channelIdx].currentSample * 2,
+        I2S_BUFFER_SIZE / 2
+    );
+    channelParams[channelIdx].currentSample += I2S_BUFFER_SIZE/4;
+    if (channelParams[channelIdx].currentSample > channelParams[channelIdx].endSample) {
+      channelParams[channelIdx].currentSample = channelParams[channelIdx].startSample;
     }
+  } else {
+    ramSampleIdx = channelParams[channelIdx].currentSample;
   }
 
   for (uint16_t i = 0; i < (I2S_BUFFER_SIZE/2) - 1; i += increment) {
@@ -115,33 +135,29 @@ void audioProcessData(void)
       // Only MIC left channel has data so we skip the right channel
       // We also only store the top 16 bits of each 24 bit sample
       // This has the effect of a crude re-sample to 16 bits
-      audio[sampleIdx] = bufferPtr[i];
+      audio[ramSampleIdx] = bufferPtr[i];
     } else {
       // Send same sample to left and right channels
-      sample = audio[sampleIdx];
+      sample = audio[ramSampleIdx];
       bufferPtr[i] = sample;
       bufferPtr[i + 1] = sample;
     }
 
-    sampleIdx++;
+    ramSampleIdx++;
     if (audioState == AUDIO_RAM_PLAY || audioState == AUDIO_RECORD) {
-      if (sampleIdx > 16000) {
-        sampleIdx = 0;
+      if (ramSampleIdx >= 16000) {
+        ramSampleIdx = 0;
         if (audioState == AUDIO_RECORD) {
           HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
           // Stop recoding audio
           HAL_I2S_DMAStop(i2sMic);
         }
       }
-    } else if (audioState == AUDIO_FLASH_PLAY) {
-      // Reset sampleIdx back to 0 on last iteration for Flash play
-      // We always use the same I2S_BUFFER_SIZE/4 samples and replace these
-      // on each call to processData
-      // This could maybe be moved out of the loop
-      if (sampleIdx >= (I2S_BUFFER_SIZE/4)) {
-        sampleIdx = 0;
-      }
     }
+  }
+
+  if (audioState == AUDIO_RAM_PLAY || audioState == AUDIO_RECORD) {
+    channelParams[channelIdx].currentSample = ramSampleIdx;
   }
 
   readyForData = false;
@@ -156,7 +172,7 @@ void audioRecord(void)
   // Start recording audio
   // Receiving 32bit frames and buffer uses 16bit data size so receive size is half buffer size
   audioState = AUDIO_RECORD;
-  sampleIdx = 0;
+  channelParams[0].currentSample = 0;
   HAL_I2S_Receive_DMA(i2sMic, (uint16_t *) buffer, I2S_BUFFER_SIZE/2);
 }
 
@@ -164,7 +180,7 @@ void audioRecord(void)
 void audioPlay(void)
 {
   audioState = AUDIO_RAM_PLAY;
-  sampleIdx = 0;
+  channelParams[0].currentSample = 0;
   HAL_I2S_Transmit_DMA(i2sDAC, (uint16_t *) buffer, I2S_BUFFER_SIZE);
 }
 
@@ -172,8 +188,7 @@ void audioPlay(void)
 void audioPlayFromFlash(void)
 {
   audioState = AUDIO_FLASH_PLAY;
-  sampleIdx = 0;
-  clipPos = FLASH_PLAY_START_POS;
+  channelParams[0].currentSample = channelParams[0].startSample;
   HAL_I2S_Transmit_DMA(i2sDAC, (uint16_t *) buffer, I2S_BUFFER_SIZE);
 }
 
@@ -189,19 +204,43 @@ void audioSetClipNum(uint8_t audioClipNum)
   if (audioClipNum < 1 || audioClipNum > 50) {
     return;
   }
-  audioClip = audioClipNum;
+  channelParams[0].clipNum = audioClipNum;
 }
 
 
 uint8_t audioGetClipNum(void)
 {
-  return audioClip;
+  return channelParams[0].clipNum;
+}
+
+
+void audioSetStartSample(uint16_t startSample)
+{
+  if (startSample > CLIP_SAMPLES) {
+    return;
+  }
+  if (startSample >= channelParams[0].endSample) {
+    return;
+  }
+  channelParams[0].startSample = startSample;
+}
+
+
+void audioSetEndSample(uint16_t endSample)
+{
+  if (endSample > CLIP_SAMPLES) {
+    return;
+  }
+  if (endSample <= channelParams[0].startSample) {
+    return;
+  }
+  channelParams[0].endSample = endSample;
 }
 
 
 void audioStore(void)
 {
-  uint8_t blockIdx = audioClip - 1;
+  uint8_t blockIdx = channelParams[0].clipNum - 1;
 
   flashEraseBlock(blockIdx);
   flashWriteData(blockIdx, (uint8_t *) audio, CLIP_SAMPLES*2);
@@ -210,7 +249,7 @@ void audioStore(void)
 
 void audioLoad(void)
 {
-  uint8_t blockIdx = audioClip - 1;
+  uint8_t blockIdx = channelParams[0].clipNum - 1;
 
   flashReadData(blockIdx, (uint8_t *) audio, CLIP_SAMPLES*2);
 }
