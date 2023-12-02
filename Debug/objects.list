@@ -18,6 +18,7 @@
 "./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.o"
 "./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.o"
 "./Src/application.o"
+"./Src/audio.o"
 "./Src/console.o"
 "./Src/consoleCommands.o"
 "./Src/consoleIo.o"
