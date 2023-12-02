@@ -21,6 +21,7 @@
 "./Src/console.o"
 "./Src/consoleCommands.o"
 "./Src/consoleIo.o"
+"./Src/flash.o"
 "./Src/main.o"
 "./Src/stm32f4xx_hal_msp.o"
 "./Src/stm32f4xx_it.o"
