@@ -13,6 +13,7 @@
 #include "consoleIo.h"
 #include "version.h"
 #include "application.h"
+#include "audio.h"
 
 #define IGNORE_UNUSED_VARIABLE(x)     if ( &x == &x ) {}
 
@@ -34,6 +35,9 @@ static eCommandResult_T ConsoleCommandSetAudioEndSample(const char buffer[]);
 static eCommandResult_T ConsoleCommandSetAudioLoop(const char buffer[]);
 static eCommandResult_T ConsoleCommandStoreAudio(const char buffer[]);
 static eCommandResult_T ConsoleCommandLoadAudio(const char buffer[]);
+static eCommandResult_T ConsoleCommandSetAudioChannelParams(const char buffer[]);
+static eCommandResult_T ConsoleCommandGetAudioChannelParams(const char buffer[]);
+static eCommandResult_T ConsoleCommandSetAudioChannelRunning(const char buffer[]);
 static eCommandResult_T ConsoleCommandOutputAudioData(const char buffer[]);
 
 
@@ -58,6 +62,9 @@ static const sConsoleCommandTable_T mConsoleCommandTable[] =
     {"store", &ConsoleCommandStoreAudio, HELP("Store audio data")},
     {"load", &ConsoleCommandLoadAudio, HELP("Load audio data")},
     {"output", &ConsoleCommandOutputAudioData, HELP("Output audio data")},
+    {"schparams", &ConsoleCommandSetAudioChannelParams, HELP("Set audio channel params")},
+    {"gchparams", &ConsoleCommandGetAudioChannelParams, HELP("Get audio channel params")},
+    {"chrunning", &ConsoleCommandSetAudioChannelRunning, HELP("Set audio channel running state")},
 
   CONSOLE_COMMAND_TABLE_END // must be LAST
 };
@@ -385,6 +392,180 @@ static eCommandResult_T ConsoleCommandOutputAudioData(const char buffer[])
     ConsoleSendParamHexUint16((uint16_t)data[i]);
     ConsoleIoSendString(STR_ENDLINE);
   }
+
+  return result;
+}
+
+
+static eCommandResult_T ConsoleCommandSetAudioChannelParams(const char buffer[])
+{
+  ChannelParams_T params;
+  int16_t parameterInt;
+  uint8_t channelIdx;
+  uint32_t startIndex = 0;
+  eCommandResult_T result;
+
+  ConsoleIoSendString(STR_ENDLINE);
+
+  result = ConsoleReceiveParamInt16(buffer, 1, &parameterInt);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+  if (parameterInt < 0 || parameterInt > 2)
+  {
+    ConsoleIoSendString("Channel index must be 0-2");
+    ConsoleIoSendString(STR_ENDLINE);
+    return COMMAND_PARAMETER_ERROR;
+  }
+  channelIdx = (uint8_t) parameterInt;
+
+  result = ConsoleReceiveParamInt16(buffer, 2, &parameterInt);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+  if (parameterInt < 1 || parameterInt > 50)
+  {
+    ConsoleIoSendString("Audio clip number must be 1-50");
+    ConsoleIoSendString(STR_ENDLINE);
+    return COMMAND_PARAMETER_ERROR;
+  }
+  params.clipNum = (uint8_t) parameterInt;
+
+  result = ConsoleReceiveParamInt16(buffer, 3, &parameterInt);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+  if (parameterInt < 0 || parameterInt > CLIP_SAMPLES)
+  {
+    ConsoleIoSendString("Audio start sample must be 0-16000");
+    ConsoleIoSendString(STR_ENDLINE);
+    return COMMAND_PARAMETER_ERROR;
+  }
+  params.startSample = (uint16_t) parameterInt;
+
+  result = ConsoleReceiveParamInt16(buffer, 4, &parameterInt);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+  if (parameterInt < 0 || parameterInt > CLIP_SAMPLES)
+  {
+    ConsoleIoSendString("Audio end sample must be 0-16000");
+    ConsoleIoSendString(STR_ENDLINE);
+    return COMMAND_PARAMETER_ERROR;
+  }
+  params.endSample = (uint16_t) parameterInt;
+
+  if (params.endSample <= params.startSample) {
+    ConsoleIoSendString("End sample must be greater than start sample");
+    ConsoleIoSendString(STR_ENDLINE);
+    return COMMAND_PARAMETER_ERROR;
+  }
+
+  result = ConsoleParamFindN(buffer, 5, &startIndex);
+  ConsoleIoSendString(STR_ENDLINE);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+  char charVal = buffer[startIndex];
+  params.loop = (charVal == 't');
+
+  appSetAudioChannelParams(channelIdx, params);
+
+  ConsoleIoSendString("Channel params set");
+  ConsoleIoSendString(STR_ENDLINE);
+
+  return result;
+}
+
+
+static eCommandResult_T ConsoleCommandGetAudioChannelParams(const char buffer[])
+{
+  int16_t parameterInt;
+  uint8_t channelIdx;
+  ChannelParams_T params;
+  eCommandResult_T result;
+
+  ConsoleIoSendString(STR_ENDLINE);
+
+  result = ConsoleReceiveParamInt16(buffer, 1, &parameterInt);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+  if (parameterInt < 0 || parameterInt > 2)
+  {
+    ConsoleIoSendString("Channel index must be 0-2");
+    ConsoleIoSendString(STR_ENDLINE);
+    return COMMAND_PARAMETER_ERROR;
+  }
+  channelIdx = (uint8_t) parameterInt;
+
+  params = appGetAudioChannelParams(channelIdx);
+
+  ConsoleIoSendString("Clip number: ");
+  ConsoleSendParamUInt8(params.clipNum);
+  ConsoleIoSendString(STR_ENDLINE);
+
+  ConsoleIoSendString("Start sample: ");
+  ConsoleSendParamInt16((int16_t) params.startSample);
+  ConsoleIoSendString(STR_ENDLINE);
+
+  ConsoleIoSendString("End sample: ");
+  ConsoleSendParamInt16((int16_t) params.endSample);
+  ConsoleIoSendString(STR_ENDLINE);
+
+  ConsoleIoSendString("Loop: ");
+  if (params.loop) {
+    ConsoleIoSendString("Yes");
+  } else {
+    ConsoleIoSendString("No");
+  }
+  ConsoleIoSendString(STR_ENDLINE);
+
+  return result;
+}
+
+
+static eCommandResult_T ConsoleCommandSetAudioChannelRunning(const char buffer[])
+{
+  int16_t parameterInt;
+  uint8_t channelIdx;
+  uint32_t startIndex = 0;
+  eCommandResult_T result;
+
+  ConsoleIoSendString(STR_ENDLINE);
+
+  result = ConsoleReceiveParamInt16(buffer, 1, &parameterInt);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+  if (parameterInt < 0 || parameterInt > 2)
+  {
+    ConsoleIoSendString("Channel index must be 0-2");
+    ConsoleIoSendString(STR_ENDLINE);
+    return COMMAND_PARAMETER_ERROR;
+  }
+  channelIdx = (uint8_t) parameterInt;
+
+  result = ConsoleParamFindN(buffer, 2, &startIndex);
+  ConsoleIoSendString(STR_ENDLINE);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+  char charVal = buffer[startIndex];
+  bool running = (charVal == 't');
+
+  appSetAudioChannelRunning(channelIdx, running);
+
+  ConsoleIoSendString("Set channel running state");
+  ConsoleIoSendString(STR_ENDLINE);
 
   return result;
 }

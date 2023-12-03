@@ -1,5 +1,3 @@
-#include "stdbool.h"
-
 #include "audio.h"
 #include "flash.h"
 #include "main.h"
@@ -7,16 +5,8 @@
 
 
 // Add playback of other channels
-// Move channel params struct into header
-// Move num samples define into header
-
-// Add functions to set and get channel params in one go
-// Add functions to set and get channel running state, set running state should also reset sampleIndex to start sample
-// Update console commands to allow all channel params to be set / get in one go
 
 
-// Samples stored in RAM or flash are a half word (only left channel is stored)
-#define CLIP_SAMPLES     16000 // 1 second of audio at 16 kHz sample rate (16000 half word samples == 31KiB)
 // Samples sent over I2S are one word (half word for each channel)
 // Samples received over I2S from the microphone are two words (one word for each channel)
 // Only the top 24bits of the left channel contains audio data, the right channel is silent
@@ -41,12 +31,7 @@ typedef enum {
 } eAudioState_T;
 static eAudioState_T audioState = AUDIO_RAM_PLAY;
 
-typedef struct {
-  uint8_t clipNum;
-  uint16_t startSample;
-  uint16_t endSample;
-  bool loop;
-} ChannelParams_T;
+
 // When state is record or play from RAM, use only first channel
 // When state is play from Flash use all channels
 static ChannelParams_T channelParams[NUM_CHANNELS];
@@ -285,4 +270,25 @@ void audioLoad(void)
 int16_t * audioGetData(void)
 {
   return audio;
+}
+
+
+void audioSetChannelParams(uint8_t channelIdx, ChannelParams_T params)
+{
+  channelParams[channelIdx] = params;
+}
+
+
+ChannelParams_T audioGetChannelParams(uint8_t channelIdx)
+{
+  return channelParams[channelIdx];
+}
+
+
+void audioSetChannelRunning(uint8_t channelIdx, bool runningState)
+{
+  running[channelIdx] = runningState;
+  if (runningState) {
+    sampleIndexes[channelIdx] = channelParams[channelIdx].startSample;
+  }
 }

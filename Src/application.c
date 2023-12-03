@@ -108,3 +108,21 @@ int16_t * appOutputAudioData(void)
 {
   return audioGetData();
 }
+
+
+void appSetAudioChannelParams(uint8_t channelIdx, ChannelParams_T params)
+{
+  audioSetChannelParams(channelIdx, params);
+}
+
+
+ChannelParams_T appGetAudioChannelParams(uint8_t channelIdx)
+{
+  return audioGetChannelParams(channelIdx);
+}
+
+
+void appSetAudioChannelRunning(uint8_t channelIdx, bool runningState)
+{
+  audioSetChannelRunning(channelIdx, runningState);
+}
