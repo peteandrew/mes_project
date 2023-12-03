@@ -3,10 +3,6 @@
 #include "main.h"
 
 
-
-// Add playback of other channels
-
-
 // Samples sent over I2S are one word (half word for each channel)
 // Samples received over I2S from the microphone are two words (one word for each channel)
 // Only the top 24bits of the left channel contains audio data, the right channel is silent
@@ -97,6 +93,7 @@ void audioProcessData(void)
   if (audioState == AUDIO_RECORD) {
     increment = 4;
   }
+  // When in AUDIO_RECORD or AUDIO_RAM_PLAY states only use channel 0
   int8_t channelIdx = 0;
   // Sample index in to audio.
   // Follows sampleIndexes[0] for RAM recording and playback as we use entire contents of audio array.
@@ -104,23 +101,28 @@ void audioProcessData(void)
   int16_t ramSampleIdx = 0;
 
   if (audioState == AUDIO_FLASH_PLAY) {
-    // Here we read the next chunk of audio clip data from Flash (enough to fill half the buffer)
-    // The offset into the audio clip in bytes is given by sampleIndexes[channelIdx] x 2
-    // We read I2S_BUFFER_SIZE/2 bytes so I2S_BUFFER_SIZE/4 samples (samples are 16 bits each)
-    // This is enough to fill half the buffer as each sample is duplicated for left and right channels
-    if (running[channelIdx]) {
-      flashReadDataOffset(
-          channelParams[channelIdx].clipNum - 1,
-          (uint8_t *) audio,
-          sampleIndexes[channelIdx] * 2,
-          I2S_BUFFER_SIZE / 2
-      );
-      sampleIndexes[channelIdx] += I2S_BUFFER_SIZE/4;
-      if (sampleIndexes[channelIdx] > channelParams[channelIdx].endSample) {
-        if (channelParams[channelIdx].loop) {
-          sampleIndexes[channelIdx] = channelParams[channelIdx].startSample;
-        } else {
-          running[channelIdx] = false;
+    for (channelIdx = 0; channelIdx < NUM_CHANNELS; channelIdx++) {
+      // Here we read the next chunk of audio clip data from Flash (enough to fill half the buffer)
+      // The offset into the audio clip in bytes is given by sampleIndexes[channelIdx] x 2
+      // We read I2S_BUFFER_SIZE/2 bytes so I2S_BUFFER_SIZE/4 samples (samples are 16 bits each)
+      // This is enough to fill half the buffer as each sample is duplicated for left and right channels
+      if (running[channelIdx]) {
+        flashReadDataOffset(
+            channelParams[channelIdx].clipNum - 1,
+            (uint8_t *) &audio[channelIdx * (I2S_BUFFER_SIZE / 2)],
+            sampleIndexes[channelIdx] * 2,
+            I2S_BUFFER_SIZE / 2
+        );
+
+        // FIXME: I think this should come after the buffer fill loop otherwise we prematurely stop channels
+        // We also want this to apply when the audio state is AUDIO_RAM_PLAY maybe?
+        sampleIndexes[channelIdx] += I2S_BUFFER_SIZE / 4;
+        if (sampleIndexes[channelIdx] > channelParams[channelIdx].endSample) {
+          if (channelParams[channelIdx].loop) {
+            sampleIndexes[channelIdx] = channelParams[channelIdx].startSample;
+          } else {
+            running[channelIdx] = false;
+          }
         }
       }
     }
@@ -134,12 +136,24 @@ void audioProcessData(void)
       // We also only store the top 16 bits of each 24 bit sample
       // This has the effect of a crude re-sample to 16 bits
       audio[ramSampleIdx] = bufferPtr[i];
-    } else {
+    } else if (audioState == AUDIO_RAM_PLAY) {
+      // FIXME: I think it should be possible to combine the code for AUDIO_RAM_PLAY and AUDIO_FLASH_PLAY
+      // Maybe we just iterate over first channel instead of all channels for AUDIO_RAM_PLAY
+
       // Send same sample to left and right channels
       if (running[channelIdx]) {
         sample = audio[ramSampleIdx];
       } else {
         sample = 0;
+      }
+      bufferPtr[i] = sample;
+      bufferPtr[i + 1] = sample;
+    } else {
+      sample = 0;
+      for (channelIdx = 0; channelIdx < NUM_CHANNELS; channelIdx++) {
+        if (running[channelIdx]) {
+          sample += audio[ramSampleIdx + (channelIdx * (I2S_BUFFER_SIZE / 2))];
+        }
       }
       bufferPtr[i] = sample;
       bufferPtr[i + 1] = sample;
