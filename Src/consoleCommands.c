@@ -7,6 +7,7 @@
 //    3. Implement the function, using ConsoleReceiveParam<Type> to get the parameters from the buffer.
 
 #include <string.h>
+#include "stdbool.h"
 #include "consoleCommands.h"
 #include "console.h"
 #include "consoleIo.h"
@@ -30,6 +31,7 @@ static eCommandResult_T ConsoleCommandSetAudioClipNum(const char buffer[]);
 static eCommandResult_T ConsoleCommandGetAudioClipNum(const char buffer[]);
 static eCommandResult_T ConsoleCommandSetAudioStartSample(const char buffer[]);
 static eCommandResult_T ConsoleCommandSetAudioEndSample(const char buffer[]);
+static eCommandResult_T ConsoleCommandSetAudioLoop(const char buffer[]);
 static eCommandResult_T ConsoleCommandStoreAudio(const char buffer[]);
 static eCommandResult_T ConsoleCommandLoadAudio(const char buffer[]);
 static eCommandResult_T ConsoleCommandOutputAudioData(const char buffer[]);
@@ -52,6 +54,7 @@ static const sConsoleCommandTable_T mConsoleCommandTable[] =
     {"clipget", &ConsoleCommandGetAudioClipNum, HELP("Get audio clip number")},
     {"startsample", &ConsoleCommandSetAudioStartSample, HELP("Set start sample")},
     {"endsample", &ConsoleCommandSetAudioEndSample, HELP("Set start sample")},
+    {"loop", &ConsoleCommandSetAudioLoop, HELP("Set loop")},
     {"store", &ConsoleCommandStoreAudio, HELP("Store audio data")},
     {"load", &ConsoleCommandLoadAudio, HELP("Load audio data")},
     {"output", &ConsoleCommandOutputAudioData, HELP("Output audio data")},
@@ -304,6 +307,32 @@ static eCommandResult_T ConsoleCommandSetAudioEndSample(const char buffer[])
   appSetAudioEndSample((uint16_t)parameterInt);
   ConsoleIoSendString(STR_ENDLINE);
   ConsoleIoSendString("Audio end sample set");
+  ConsoleIoSendString(STR_ENDLINE);
+
+  return result;
+}
+
+
+static eCommandResult_T ConsoleCommandSetAudioLoop(const char buffer[])
+{
+  uint32_t startIndex = 0;
+  eCommandResult_T result;
+  result = ConsoleParamFindN(buffer, 1, &startIndex);
+  ConsoleIoSendString(STR_ENDLINE);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+
+  char charVal = buffer[startIndex];
+
+  if (charVal == 't') {
+    appSetAudioLoop(true);
+    ConsoleIoSendString("Loop on");
+  } else {
+    appSetAudioLoop(false);
+    ConsoleIoSendString("Loop off");
+  }
   ConsoleIoSendString(STR_ENDLINE);
 
   return result;

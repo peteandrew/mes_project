@@ -1,6 +1,7 @@
 #ifndef APPLICATION_H
 #define APPLICATION_H
 
+#include "stdbool.h"
 #include "stm32f4xx_hal.h"
 
 
@@ -16,6 +17,7 @@ void appSetAudioClipNum(uint8_t audioClipNum);
 uint8_t appGetAudioClipNum(void);
 void appSetAudioStartSample(uint16_t startSample);
 void appSetAudioEndSample(uint16_t startSample);
+void appSetAudioLoop(bool loop);
 void appStoreAudio(void);
 void appLoadAudio(void);
 int16_t * appOutputAudioData(void);

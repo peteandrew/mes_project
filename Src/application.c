@@ -1,3 +1,4 @@
+#include "application.h"
 #include "main.h"
 #include "console.h"
 #include "flash.h"
@@ -82,6 +83,12 @@ void appSetAudioStartSample(uint16_t startSample)
 void appSetAudioEndSample(uint16_t endSample)
 {
   audioSetEndSample(endSample);
+}
+
+
+void appSetAudioLoop(bool loop)
+{
+  audioSetLoop(loop);
 }
 
 
