@@ -3,10 +3,10 @@
 
 #include "stdbool.h"
 #include "stm32f4xx_hal.h"
-#include "audio.h"
+#include "audioTypes.h"
 
 
-void appInit(I2S_HandleTypeDef *i2sMicH, I2S_HandleTypeDef *i2sDACH, SPI_HandleTypeDef *spiFlashH);
+void appInit(I2S_HandleTypeDef *i2sMicH, I2S_HandleTypeDef *i2sDACH, SPI_HandleTypeDef *spiFlashH, TIM_HandleTypeDef *stepTimerH);
 void appLoop(void);
 void appToggleLED(void);
 uint16_t appFlashReadDeviceId(void);
@@ -25,5 +25,9 @@ int16_t * appOutputAudioData(void);
 void appSetAudioChannelParams(uint8_t channelIdx, ChannelParams_T params);
 ChannelParams_T appGetAudioChannelParams(uint8_t channelIdx);
 void appSetAudioChannelRunning(uint8_t channelIdx, bool runningState);
+void appStartSequence(void);
+void appStopSequence(void);
+void appSetSequenceStepChannelParams(uint8_t stepIdx, uint8_t channelIdx, ChannelParams_T params);
+ChannelParams_T appGetSequenceStepChannelParams(uint8_t stepIdx, uint8_t channelIdx);
 
 #endif

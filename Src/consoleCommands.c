@@ -13,6 +13,7 @@
 #include "consoleIo.h"
 #include "version.h"
 #include "application.h"
+#include "audioTypes.h"
 #include "audio.h"
 
 #define IGNORE_UNUSED_VARIABLE(x)     if ( &x == &x ) {}
@@ -39,6 +40,10 @@ static eCommandResult_T ConsoleCommandSetAudioChannelParams(const char buffer[])
 static eCommandResult_T ConsoleCommandGetAudioChannelParams(const char buffer[]);
 static eCommandResult_T ConsoleCommandSetAudioChannelRunning(const char buffer[]);
 static eCommandResult_T ConsoleCommandOutputAudioData(const char buffer[]);
+static eCommandResult_T ConsoleCommandStartSequence(const char buffer[]);
+static eCommandResult_T ConsoleCommandStopSequence(const char buffer[]);
+static eCommandResult_T ConsoleCommandSetAudioChannelStepParams(const char buffer[]);
+static eCommandResult_T ConsoleCommandGetAudioChannelStepParams(const char buffer[]);
 
 
 static const sConsoleCommandTable_T mConsoleCommandTable[] =
@@ -65,6 +70,11 @@ static const sConsoleCommandTable_T mConsoleCommandTable[] =
     {"schparams", &ConsoleCommandSetAudioChannelParams, HELP("Set audio channel params")},
     {"gchparams", &ConsoleCommandGetAudioChannelParams, HELP("Get audio channel params")},
     {"chrunning", &ConsoleCommandSetAudioChannelRunning, HELP("Set audio channel running state")},
+    {"startseq", &ConsoleCommandStartSequence, HELP("Start sequence")},
+    {"stopseq", &ConsoleCommandStopSequence, HELP("Stop sequence")},
+    {"schsparams", &ConsoleCommandSetAudioChannelStepParams, HELP("Set audio channel step params")},
+    {"gchsparams", &ConsoleCommandGetAudioChannelStepParams, HELP("Get audio channel step params")},
+
 
   CONSOLE_COMMAND_TABLE_END // must be LAST
 };
@@ -565,6 +575,202 @@ static eCommandResult_T ConsoleCommandSetAudioChannelRunning(const char buffer[]
   appSetAudioChannelRunning(channelIdx, running);
 
   ConsoleIoSendString("Set channel running state");
+  ConsoleIoSendString(STR_ENDLINE);
+
+  return result;
+}
+
+
+static eCommandResult_T ConsoleCommandStartSequence(const char buffer[])
+{
+  eCommandResult_T result = COMMAND_SUCCESS;
+
+    IGNORE_UNUSED_VARIABLE(buffer);
+
+  ConsoleIoSendString(STR_ENDLINE);
+
+  appStartSequence();
+
+  ConsoleIoSendString("Sequence started");
+  ConsoleIoSendString(STR_ENDLINE);
+
+  return result;
+}
+
+
+static eCommandResult_T ConsoleCommandStopSequence(const char buffer[])
+{
+  eCommandResult_T result = COMMAND_SUCCESS;
+
+    IGNORE_UNUSED_VARIABLE(buffer);
+
+  ConsoleIoSendString(STR_ENDLINE);
+
+  appStopSequence();
+
+  ConsoleIoSendString("Sequence stopped");
+  ConsoleIoSendString(STR_ENDLINE);
+
+  return result;
+}
+
+
+static eCommandResult_T ConsoleCommandSetAudioChannelStepParams(const char buffer[])
+{
+  ChannelParams_T params;
+  int16_t parameterInt;
+  uint8_t channelIdx;
+  uint8_t stepIdx;
+  uint32_t startIndex = 0;
+  eCommandResult_T result;
+
+  ConsoleIoSendString(STR_ENDLINE);
+
+  result = ConsoleReceiveParamInt16(buffer, 1, &parameterInt);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+  if (parameterInt < 0 || parameterInt > 2)
+  {
+    ConsoleIoSendString("Channel index must be 0-2");
+    ConsoleIoSendString(STR_ENDLINE);
+    return COMMAND_PARAMETER_ERROR;
+  }
+  channelIdx = (uint8_t) parameterInt;
+
+  result = ConsoleReceiveParamInt16(buffer, 2, &parameterInt);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+  if (parameterInt < 0 || parameterInt > 15)
+  {
+    ConsoleIoSendString("Step must be 0-15");
+    ConsoleIoSendString(STR_ENDLINE);
+    return COMMAND_PARAMETER_ERROR;
+  }
+  stepIdx = (uint8_t) parameterInt;
+
+  result = ConsoleReceiveParamInt16(buffer, 3, &parameterInt);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+  if (parameterInt < 0 || parameterInt > 50)
+  {
+    ConsoleIoSendString("Audio clip number must be 0-50");
+    ConsoleIoSendString(STR_ENDLINE);
+    return COMMAND_PARAMETER_ERROR;
+  }
+  params.clipNum = (uint8_t) parameterInt;
+
+  result = ConsoleReceiveParamInt16(buffer, 4, &parameterInt);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+  if (parameterInt < 0 || parameterInt > CLIP_SAMPLES)
+  {
+    ConsoleIoSendString("Audio start sample must be 0-16000");
+    ConsoleIoSendString(STR_ENDLINE);
+    return COMMAND_PARAMETER_ERROR;
+  }
+  params.startSample = (uint16_t) parameterInt;
+
+  result = ConsoleReceiveParamInt16(buffer, 5, &parameterInt);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+  if (parameterInt < 0 || parameterInt > CLIP_SAMPLES)
+  {
+    ConsoleIoSendString("Audio end sample must be 0-16000");
+    ConsoleIoSendString(STR_ENDLINE);
+    return COMMAND_PARAMETER_ERROR;
+  }
+  params.endSample = (uint16_t) parameterInt;
+
+  if (params.endSample <= params.startSample) {
+    ConsoleIoSendString("End sample must be greater than start sample");
+    ConsoleIoSendString(STR_ENDLINE);
+    return COMMAND_PARAMETER_ERROR;
+  }
+
+  result = ConsoleParamFindN(buffer, 6, &startIndex);
+  ConsoleIoSendString(STR_ENDLINE);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+  char charVal = buffer[startIndex];
+  params.loop = (charVal == 't');
+
+  appSetSequenceStepChannelParams(stepIdx, channelIdx, params);
+
+  ConsoleIoSendString("Step channel params set");
+  ConsoleIoSendString(STR_ENDLINE);
+
+  return result;
+}
+
+
+static eCommandResult_T ConsoleCommandGetAudioChannelStepParams(const char buffer[])
+{
+  int16_t parameterInt;
+  uint8_t channelIdx;
+  uint8_t stepIdx;
+  ChannelParams_T params;
+  eCommandResult_T result;
+
+  ConsoleIoSendString(STR_ENDLINE);
+
+  result = ConsoleReceiveParamInt16(buffer, 1, &parameterInt);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+  if (parameterInt < 0 || parameterInt > 2)
+  {
+    ConsoleIoSendString("Channel index must be 0-2");
+    ConsoleIoSendString(STR_ENDLINE);
+    return COMMAND_PARAMETER_ERROR;
+  }
+  channelIdx = (uint8_t) parameterInt;
+
+  result = ConsoleReceiveParamInt16(buffer, 2, &parameterInt);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+  if (parameterInt < 0 || parameterInt > 15)
+  {
+    ConsoleIoSendString("Step must be 0-15");
+    ConsoleIoSendString(STR_ENDLINE);
+    return COMMAND_PARAMETER_ERROR;
+  }
+  stepIdx = (uint8_t) parameterInt;
+
+  params = appGetSequenceStepChannelParams(stepIdx, channelIdx);
+
+  ConsoleIoSendString("Clip number: ");
+  ConsoleSendParamUInt8(params.clipNum);
+  ConsoleIoSendString(STR_ENDLINE);
+
+  ConsoleIoSendString("Start sample: ");
+  ConsoleSendParamInt16((int16_t) params.startSample);
+  ConsoleIoSendString(STR_ENDLINE);
+
+  ConsoleIoSendString("End sample: ");
+  ConsoleSendParamInt16((int16_t) params.endSample);
+  ConsoleIoSendString(STR_ENDLINE);
+
+  ConsoleIoSendString("Loop: ");
+  if (params.loop) {
+    ConsoleIoSendString("Yes");
+  } else {
+    ConsoleIoSendString("No");
+  }
   ConsoleIoSendString(STR_ENDLINE);
 
   return result;

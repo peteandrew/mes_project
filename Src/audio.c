@@ -8,8 +8,6 @@
 // Only the top 24bits of the left channel contains audio data, the right channel is silent
 #define I2S_BUFFER_SIZE   256 // Size of I2S buffer in half words (256 half words == 0.5KiB)
 
-#define NUM_CHANNELS  3
-
 
 static I2S_HandleTypeDef *i2sMic;
 static I2S_HandleTypeDef *i2sDAC;
