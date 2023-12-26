@@ -32,6 +32,8 @@ static ChannelParams_T channelParams[NUM_CHANNELS];
 static uint16_t sampleIndexes[NUM_CHANNELS];
 static bool running[NUM_CHANNELS];
 
+static uiChangeCallback uiChangeCB;
+
 
 void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef *hi2s)
 {
@@ -61,7 +63,7 @@ void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s)
 }
 
 
-void audioInit(I2S_HandleTypeDef *i2sMicH, I2S_HandleTypeDef *i2sDACH)
+void audioInit(I2S_HandleTypeDef *i2sMicH, I2S_HandleTypeDef *i2sDACH, uiChangeCallback _uiChangeCB)
 {
   i2sMic = i2sMicH;
   i2sDAC = i2sDACH;
@@ -74,6 +76,8 @@ void audioInit(I2S_HandleTypeDef *i2sMicH, I2S_HandleTypeDef *i2sDACH)
     sampleIndexes[i] = 0;
     running[i] = false;
   }
+
+  uiChangeCB = _uiChangeCB;
 }
 
 

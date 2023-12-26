@@ -4,12 +4,12 @@
 #include "stdbool.h"
 #include "stm32f4xx_hal.h"
 #include "audioTypes.h"
+#include "ui_values.h"
 
 // Samples stored in RAM or flash are a half word (only left channel is stored)
 #define CLIP_SAMPLES     16000 // 1 second of audio at 16 kHz sample rate (16000 half word samples == 31KiB)
 
-
-void audioInit(I2S_HandleTypeDef *i2sMicH, I2S_HandleTypeDef *i2sDACH);
+void audioInit(I2S_HandleTypeDef *i2sMicH, I2S_HandleTypeDef *i2sDACH, uiChangeCallback _uiChangeCB);
 void audioProcessData(void);
 void audioRecord(void);
 void audioPlay(void);

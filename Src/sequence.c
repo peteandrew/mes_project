@@ -1,10 +1,16 @@
 #include "sequence.h"
 #include "audioTypes.h"
 
-#define NUM_STEPS 16
-
 static uint16_t currStep = 0;
 static ChannelParams_T stepParams[NUM_CHANNELS][NUM_STEPS];
+
+static uiChangeCallback uiChangeCB;
+
+
+void sequenceInit(uiChangeCallback _uiChangeCB)
+{
+  uiChangeCB = _uiChangeCB;
+}
 
 
 ChannelParams_T getStepChannelParams(uint8_t channelIdx, uint8_t stepIdx)

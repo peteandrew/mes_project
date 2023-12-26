@@ -1,3 +1,5 @@
+"./Drivers/ST7789/fonts.o"
+"./Drivers/ST7789/st7789.o"
 "./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.o"
 "./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.o"
 "./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.o"
