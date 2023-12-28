@@ -26,5 +26,6 @@ int16_t * audioGetData(void);
 void audioSetChannelParams(uint8_t channelIdx, ChannelParams_T params);
 ChannelParams_T audioGetChannelParams(uint8_t channelIdx);
 void audioSetChannelRunning(uint8_t channelIdx, bool runningState);
+bool getAudioRunning(void);
 
 #endif

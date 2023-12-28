@@ -16,23 +16,22 @@
   ******************************************************************************
   */
 
-//  - Add audio clip menus
-//    - Playback
-//      - allow selection of clip
-//      - plays back from flash
-//      - can control start / end / loop
-//    - Recording
-//      - allow selection of clip
-//      - display used state
-//      - record button
-//      - when recorded, display play and store options
-//  - Change existing sequence menu to sequence edit menu
-//  - Add top level sequence menu
-//  - Add main menu
+//  - Fix audio when playback stopped - play back zeroed samples rather than stopping DMA or mute DAC
+//  - Fix centering of menu titles
+//  - Investigate improving LCD performance - increase buffer size?
+//  - Improve rotary encoder increments / debouncing
+//      - try different rotary encoder
+//      - use interrupt instead of polling
+//  - Use interrupts for button
+//  - Remove separate audio clip control functions
+//    - Replace calls with calls to change audio channel 1 params
 //  - Storing of sequences
+//    - Add store menu option
 //  - Move UI code into separate module
 //  - Add used flag to audio clips
-//  - Improve rotary encoder increments / debouncing
+//    - display used state in record audio clip menu
+//  - Change menu options when clip has been recorded
+//    - display play and store options
 //
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/

@@ -30,7 +30,8 @@ static eAudioState_T audioState = AUDIO_RAM_PLAY;
 // When state is play from Flash use all channels
 static ChannelParams_T channelParams[NUM_CHANNELS];
 static uint16_t sampleIndexes[NUM_CHANNELS];
-static bool running[NUM_CHANNELS];
+static bool channelRunning[NUM_CHANNELS];
+static bool audioRunning;
 
 static uiChangeCallback uiChangeCB;
 
@@ -74,8 +75,9 @@ void audioInit(I2S_HandleTypeDef *i2sMicH, I2S_HandleTypeDef *i2sDACH, uiChangeC
     channelParams[i].endSample = CLIP_SAMPLES - 1;
     channelParams[i].loop = true;
     sampleIndexes[i] = 0;
-    running[i] = false;
+    channelRunning[i] = false;
   }
+  audioRunning = false;
 
   uiChangeCB = _uiChangeCB;
 }
@@ -103,12 +105,13 @@ void audioProcessData(void)
   int16_t ramSampleIdx = 0;
 
   if (audioState == AUDIO_FLASH_PLAY) {
+    bool anyChannelsRunning = false;
     for (channelIdx = 0; channelIdx < NUM_CHANNELS; channelIdx++) {
       // Here we read the next chunk of audio clip data from Flash (enough to fill half the buffer)
       // The offset into the audio clip in bytes is given by sampleIndexes[channelIdx] x 2
       // We read I2S_BUFFER_SIZE/2 bytes so I2S_BUFFER_SIZE/4 samples (samples are 16 bits each)
       // This is enough to fill half the buffer as each sample is duplicated for left and right channels
-      if (running[channelIdx]) {
+      if (channelRunning[channelIdx]) {
         flashReadDataOffset(
             channelParams[channelIdx].clipNum - 1,
             (uint8_t *) &audio[channelIdx * (I2S_BUFFER_SIZE / 2)],
@@ -123,10 +126,18 @@ void audioProcessData(void)
           if (channelParams[channelIdx].loop) {
             sampleIndexes[channelIdx] = channelParams[channelIdx].startSample;
           } else {
-            running[channelIdx] = false;
+            channelRunning[channelIdx] = false;
           }
         }
       }
+
+      if (channelRunning[channelIdx]) {
+        anyChannelsRunning = true;
+      }
+    }
+    if (!anyChannelsRunning && audioRunning) {
+      audioRunning = false;
+      uiChangeCB(UI_AUDIO_RUNNING);
     }
   } else {
     ramSampleIdx = sampleIndexes[channelIdx];
@@ -143,7 +154,7 @@ void audioProcessData(void)
       // Maybe we just iterate over first channel instead of all channels for AUDIO_RAM_PLAY
 
       // Send same sample to left and right channels
-      if (running[channelIdx]) {
+      if (channelRunning[channelIdx]) {
         sample = audio[ramSampleIdx];
       } else {
         sample = 0;
@@ -153,7 +164,7 @@ void audioProcessData(void)
     } else {
       sample = 0;
       for (channelIdx = 0; channelIdx < NUM_CHANNELS; channelIdx++) {
-        if (running[channelIdx]) {
+        if (channelRunning[channelIdx]) {
           sample += audio[ramSampleIdx + (channelIdx * (I2S_BUFFER_SIZE / 2))];
         }
       }
@@ -169,8 +180,12 @@ void audioProcessData(void)
           HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
           // Stop recoding audio
           HAL_I2S_DMAStop(i2sMic);
+          audioRunning = false;
+          uiChangeCB(UI_AUDIO_RUNNING);
         } else if (!channelParams[channelIdx].loop) {
-          running[channelIdx] = false;
+          channelRunning[channelIdx] = false;
+          audioRunning = false;
+          uiChangeCB(UI_AUDIO_RUNNING);
         }
       }
     }
@@ -194,6 +209,8 @@ void audioRecord(void)
   audioState = AUDIO_RECORD;
   sampleIndexes[0] = 0;
   HAL_I2S_Receive_DMA(i2sMic, (uint16_t *) buffer, I2S_BUFFER_SIZE/2);
+  audioRunning = true;
+  uiChangeCB(UI_AUDIO_RUNNING);
 }
 
 
@@ -201,8 +218,10 @@ void audioPlay(void)
 {
   audioState = AUDIO_RAM_PLAY;
   sampleIndexes[0] = 0;
-  running[0] = true;
+  channelRunning[0] = true;
   HAL_I2S_Transmit_DMA(i2sDAC, (uint16_t *) buffer, I2S_BUFFER_SIZE);
+  audioRunning = true;
+  uiChangeCB(UI_AUDIO_RUNNING);
 }
 
 
@@ -210,14 +229,18 @@ void audioPlayFromFlash(void)
 {
   audioState = AUDIO_FLASH_PLAY;
   sampleIndexes[0] = channelParams[0].startSample;
-  running[0] = true;
+  channelRunning[0] = true;
   HAL_I2S_Transmit_DMA(i2sDAC, (uint16_t *) buffer, I2S_BUFFER_SIZE);
+  audioRunning = true;
+  uiChangeCB(UI_AUDIO_RUNNING);
 }
 
 
 void audioStop(void)
 {
   HAL_I2S_DMAStop(i2sDAC);
+  audioRunning = false;
+  uiChangeCB(UI_AUDIO_RUNNING);
 }
 
 
@@ -303,8 +326,16 @@ ChannelParams_T audioGetChannelParams(uint8_t channelIdx)
 
 void audioSetChannelRunning(uint8_t channelIdx, bool runningState)
 {
-  running[channelIdx] = runningState;
+  channelRunning[channelIdx] = runningState;
   if (runningState) {
     sampleIndexes[channelIdx] = channelParams[channelIdx].startSample;
+    audioRunning = true;
+    uiChangeCB(UI_AUDIO_RUNNING);
   }
+}
+
+
+bool getAudioRunning(void)
+{
+  return audioRunning;
 }
