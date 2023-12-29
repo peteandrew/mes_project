@@ -16,13 +16,10 @@
   ******************************************************************************
   */
 
-//  - Fix audio when playback stopped - play back zeroed samples rather than stopping DMA or mute DAC
+//  - Change rotary encoder to use interrupts instead of polling
+//  - Change button to use interrupts instead of polling
 //  - Fix centering of menu titles
 //  - Investigate improving LCD performance - increase buffer size?
-//  - Improve rotary encoder increments / debouncing
-//      - try different rotary encoder
-//      - use interrupt instead of polling
-//  - Use interrupts for button
 //  - Remove separate audio clip control functions
 //    - Replace calls with calls to change audio channel 1 params
 //  - Storing of sequences
@@ -32,6 +29,7 @@
 //    - display used state in record audio clip menu
 //  - Change menu options when clip has been recorded
 //    - display play and store options
+//  - Flash LED with beats
 //
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/

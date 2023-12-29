@@ -69,6 +69,8 @@ void audioInit(I2S_HandleTypeDef *i2sMicH, I2S_HandleTypeDef *i2sDACH, uiChangeC
   i2sMic = i2sMicH;
   i2sDAC = i2sDACH;
 
+  HAL_I2S_Transmit_DMA(i2sDAC, (uint16_t *) buffer, I2S_BUFFER_SIZE);
+
   for (int i=0; i < NUM_CHANNELS; i++) {
     channelParams[i].clipNum = 1;
     channelParams[i].startSample = 0;
@@ -180,8 +182,7 @@ void audioProcessData(void)
           HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
           // Stop recoding audio
           HAL_I2S_DMAStop(i2sMic);
-          audioRunning = false;
-          uiChangeCB(UI_AUDIO_RUNNING);
+          audioPlay();
         } else if (!channelParams[channelIdx].loop) {
           channelRunning[channelIdx] = false;
           audioRunning = false;
@@ -238,7 +239,9 @@ void audioPlayFromFlash(void)
 
 void audioStop(void)
 {
-  HAL_I2S_DMAStop(i2sDAC);
+  for (int i=0; i < NUM_CHANNELS; i++) {
+    channelRunning[i] = false;
+  }
   audioRunning = false;
   uiChangeCB(UI_AUDIO_RUNNING);
 }
