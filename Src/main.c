@@ -16,7 +16,6 @@
   ******************************************************************************
   */
 
-//  - Fix centering of menu titles
 //  - Investigate improving LCD performance - increase buffer size?
 //  - Remove separate audio clip control functions
 //    - Replace calls with calls to change audio channel 1 params

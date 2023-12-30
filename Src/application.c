@@ -457,6 +457,16 @@ void renderMenuMarker(uint8_t oldItemPos, uint8_t newItemPos)
   ST7789_WriteChar(MENU_MARKER_X, y, '>', Font_11x18, BLACK, WHITE);
 }
 
+uint8_t simpleStrlen(char *str)
+{
+  uint8_t len = 0;
+  while (*str != '\0') {
+    len++;
+    str++;
+  }
+  return len;
+}
+
 void uiUpdate(int16_t encCountChange, bool buttonPressed)
 {
   menuT *currMenu = menus[menuIdx];
@@ -464,8 +474,9 @@ void uiUpdate(int16_t encCountChange, bool buttonPressed)
   if (menuRenderRequired) {
     ST7789_Fill_Color(WHITE);
 
-    //menuItemT menu[] = menus[menuIdx];
-    ST7789_WriteString(90, 5, currMenu->title, Font_11x18, BLUE, WHITE);
+    uint8_t titleLen = simpleStrlen(currMenu->title);
+    uint8_t titleX = ((22 - titleLen) / 2) * 11;
+    ST7789_WriteString(titleX, 5, currMenu->title, Font_11x18, BLUE, WHITE);
 
     for (int i = 0; i < currMenu->numItems; i++) {
       renderMenuItem(i, currMenu->items[i].label, currMenu->items[i].itemType, currMenu->items[i].uiValueType, false);
