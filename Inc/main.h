@@ -69,6 +69,7 @@ void Error_Handler(void);
 #define SPI_NSS_GPIO_Port GPIOA
 #define ENC_BUTTON_Pin GPIO_PIN_14
 #define ENC_BUTTON_GPIO_Port GPIOB
+#define ENC_BUTTON_EXTI_IRQn EXTI15_10_IRQn
 
 /* USER CODE BEGIN Private defines */
 

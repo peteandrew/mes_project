@@ -30,7 +30,6 @@ static TIM_HandleTypeDef *stepTimer;
 static TIM_HandleTypeDef *encTimer;
 static TIM_HandleTypeDef *inputTimer;
 static volatile bool triggerStep = false;
-static volatile bool pollInput = false;
 
 void switchMainMenu(void);
 void switchAudioClipMenu(void);
@@ -160,9 +159,10 @@ int8_t itemSelectState = 0;
 bool menuRenderRequired = true;
 int16_t uiValuesChanged = 0;
 
-uint16_t previousCount;
-int16_t countChange = 0;
-bool buttonPressed = false;
+volatile uint16_t previousCount;
+volatile int16_t countChange = 0;
+volatile bool tempButtonPressed = false;
+volatile bool buttonPressed = false;
 bool buttonActioned = false;
 
 uint8_t sequence = 0;
@@ -171,15 +171,40 @@ uint8_t sequenceStep = 0;
 bool sequencePlaying = false;
 
 
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  if (GPIO_Pin == ENC_BUTTON_Pin) {
+    tempButtonPressed = HAL_GPIO_ReadPin(ENC_BUTTON_GPIO_Port, ENC_BUTTON_Pin) == GPIO_PIN_RESET;
+    HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
+    inputTimer->Instance->CNT = 0;
+    HAL_TIM_Base_Start_IT(inputTimer);
+  }
+}
+
+
 void HAL_TIM_PeriodElapsedCallback (TIM_HandleTypeDef *htim)
 {
   if (htim->Instance == inputTimer->Instance) {
-    pollInput = true;
+	HAL_TIM_Base_Stop_IT(inputTimer);
+	bool testButtonPressed = HAL_GPIO_ReadPin(ENC_BUTTON_GPIO_Port, ENC_BUTTON_Pin) == GPIO_PIN_RESET;
+	if (testButtonPressed == tempButtonPressed) {
+	  buttonPressed = testButtonPressed;
+	} else {
+	  buttonPressed = false;
+	}
+	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
   }
   if (htim->Instance == stepTimer->Instance)
   {
     triggerStep = true;
   }
+}
+
+
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+{
+  countChange = htim->Instance->CNT - previousCount;
+  previousCount = htim->Instance->CNT = 32767;
 }
 
 
@@ -432,9 +457,8 @@ void renderMenuMarker(uint8_t oldItemPos, uint8_t newItemPos)
   ST7789_WriteChar(MENU_MARKER_X, y, '>', Font_11x18, BLACK, WHITE);
 }
 
-bool uiUpdate(int16_t encCountChange, bool buttonPressed)
+void uiUpdate(int16_t encCountChange, bool buttonPressed)
 {
-  bool buttonActioned = false;
   menuT *currMenu = menus[menuIdx];
 
   if (menuRenderRequired) {
@@ -451,7 +475,7 @@ bool uiUpdate(int16_t encCountChange, bool buttonPressed)
 
     menuRenderRequired = false;
 
-    return buttonActioned;
+    return;
   }
 
   int oldMenuPos = menuPos;
@@ -513,27 +537,31 @@ bool uiUpdate(int16_t encCountChange, bool buttonPressed)
   }
 
   if (buttonPressed) {
-    if (!currMenu->items[menuPos].read_only) {
-      switch (currMenu->items[menuPos].itemType) {
-      case INT_VALUE:
-        if (++itemSelectState > 3) {
-          itemSelectState = 0;
+    if (!buttonActioned) {
+      if (!currMenu->items[menuPos].read_only) {
+        switch (currMenu->items[menuPos].itemType) {
+          case INT_VALUE:
+            if (++itemSelectState > 3) {
+              itemSelectState = 0;
+            }
+            uiValuesChanged |= currMenu->items[menuPos].uiValueType;
+            break;
+          case BOOL_VALUE:
+            if (currMenu->items[menuPos].uiValueType == UI_CLIP_LOOP) {
+              uiAudioLoopToggle();
+            }
+            break;
+          case ACTION:
+            if (currMenu->items[menuPos].actionFunc) {
+              currMenu->items[menuPos].actionFunc();
+            }
+            break;
         }
-        uiValuesChanged |= currMenu->items[menuPos].uiValueType;
-        break;
-      case BOOL_VALUE:
-        if (currMenu->items[menuPos].uiValueType == UI_CLIP_LOOP) {
-          uiAudioLoopToggle();
-        }
-        break;
-      case ACTION:
-        if (currMenu->items[menuPos].actionFunc) {
-          currMenu->items[menuPos].actionFunc();
-        }
-        break;
       }
+      buttonActioned = true;
     }
-    buttonActioned = true;
+  } else {
+	buttonActioned = false;
   }
 
   if (uiValuesChanged) {
@@ -553,7 +581,6 @@ bool uiUpdate(int16_t encCountChange, bool buttonPressed)
     uiValuesChanged = 0;
   }
 
-  return buttonActioned;
 }
 
 
@@ -565,13 +592,12 @@ void appInit(I2S_HandleTypeDef *i2sMicH, I2S_HandleTypeDef *i2sDACH, SPI_HandleT
   sequenceInit(&uiValueChangeCB);
   stepTimer = stepTimerH;
   encTimer = encTimerH;
-  HAL_TIM_Encoder_Start(encTimerH, TIM_CHANNEL_ALL);
+  HAL_TIM_Encoder_Start_IT(encTimerH, TIM_CHANNEL_ALL);
   previousCount = encTimerH->Instance->CNT = 32767;
   ST7789_Init();
   ST7789_Fill_Color(WHITE);
   HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
   inputTimer = inputTimerH;
-  HAL_TIM_Base_Start_IT(inputTimer);
 }
 
 
@@ -595,26 +621,8 @@ void appLoop(void)
       triggerStep = false;
     }
 
-    if (pollInput) {
-      countChange = encTimer->Instance->CNT - previousCount;
-      previousCount = encTimer->Instance->CNT = 32767;
-      buttonPressed = HAL_GPIO_ReadPin(ENC_BUTTON_GPIO_Port, ENC_BUTTON_Pin) == GPIO_PIN_RESET;
-      if (buttonPressed) {
-        if (buttonActioned) {
-          buttonPressed = false;
-        }
-      } else {
-        buttonActioned = false;
-      }
-
-      pollInput = false;
-
-      bool uiButtonActioned = uiUpdate(countChange, buttonPressed);
-      if (uiButtonActioned) {
-        buttonActioned = true;
-      }
-    }
-
+    uiUpdate(countChange, buttonPressed);
+    countChange = 0;
   }
 }
 
