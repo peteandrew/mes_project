@@ -14,7 +14,7 @@
 #include "version.h"
 #include "application.h"
 #include "audioTypes.h"
-#include "audio.h"
+#include "sequence.h"
 
 #define IGNORE_UNUSED_VARIABLE(x)     if ( &x == &x ) {}
 
@@ -31,6 +31,8 @@ static eCommandResult_T ConsoleCommandPlayAudioFromFlash(const char buffer[]);
 static eCommandResult_T ConsoleCommandStopAudio(const char buffer[]);
 static eCommandResult_T ConsoleCommandSetAudioClipNum(const char buffer[]);
 static eCommandResult_T ConsoleCommandGetAudioClipNum(const char buffer[]);
+static eCommandResult_T ConsoleCommandGetAudioClipUsed(const char buffer[]);
+static eCommandResult_T ConsoleCommandSetAudioClipUsed(const char buffer[]);
 static eCommandResult_T ConsoleCommandSetAudioStartSample(const char buffer[]);
 static eCommandResult_T ConsoleCommandSetAudioEndSample(const char buffer[]);
 static eCommandResult_T ConsoleCommandSetAudioLoop(const char buffer[]);
@@ -61,6 +63,8 @@ static const sConsoleCommandTable_T mConsoleCommandTable[] =
     {"stop", &ConsoleCommandStopAudio, HELP("Stop audio playback")},
     {"clipset", &ConsoleCommandSetAudioClipNum, HELP("Set audio clip number")},
     {"clipget", &ConsoleCommandGetAudioClipNum, HELP("Get audio clip number")},
+    {"clipused", &ConsoleCommandGetAudioClipUsed, HELP("Get whether audio clip has been used")},
+    {"setclipused", &ConsoleCommandSetAudioClipUsed, HELP("Set audio clip used flag")},
     {"startsample", &ConsoleCommandSetAudioStartSample, HELP("Set start sample")},
     {"endsample", &ConsoleCommandSetAudioEndSample, HELP("Set start sample")},
     {"loop", &ConsoleCommandSetAudioLoop, HELP("Set loop")},
@@ -243,10 +247,10 @@ static eCommandResult_T ConsoleCommandSetAudioClipNum(const char buffer[])
     return result;
   }
 
-  if (parameterInt < 1 || parameterInt > 50)
+  if (parameterInt < 1 || parameterInt > NUM_CLIPS)
   {
     ConsoleIoSendString(STR_ENDLINE);
-    ConsoleIoSendString("Audio clip number must be 1-50");
+    ConsoleIoSendString("Audio clip number must be 1-" STRINGIZE(NUM_CLIPS));
     ConsoleIoSendString(STR_ENDLINE);
     return COMMAND_PARAMETER_ERROR;
   }
@@ -276,6 +280,64 @@ static eCommandResult_T ConsoleCommandGetAudioClipNum(const char buffer[])
 }
 
 
+static eCommandResult_T ConsoleCommandGetAudioClipUsed(const char buffer[])
+{
+  int16_t parameterInt;
+  eCommandResult_T result;
+  result = ConsoleReceiveParamInt16(buffer, 1, &parameterInt);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+
+  if (parameterInt < 1 || parameterInt > NUM_CLIPS)
+  {
+    ConsoleIoSendString(STR_ENDLINE);
+    ConsoleIoSendString("Audio clip number must be 1-" STRINGIZE(NUM_CLIPS));
+    ConsoleIoSendString(STR_ENDLINE);
+    return COMMAND_PARAMETER_ERROR;
+  }
+
+  ConsoleIoSendString(STR_ENDLINE);
+  ConsoleIoSendString("Audio clip used: ");
+  if (appGetAudioClipUsed((uint8_t)parameterInt)) {
+    ConsoleIoSendString("Yes");
+  } else {
+    ConsoleIoSendString("No");
+  }
+  ConsoleIoSendString(STR_ENDLINE);
+
+  return result;
+}
+
+
+static eCommandResult_T ConsoleCommandSetAudioClipUsed(const char buffer[])
+{
+  int16_t parameterInt;
+  eCommandResult_T result;
+  result = ConsoleReceiveParamInt16(buffer, 1, &parameterInt);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+
+  if (parameterInt < 1 || parameterInt > NUM_CLIPS)
+  {
+    ConsoleIoSendString(STR_ENDLINE);
+    ConsoleIoSendString("Audio clip number must be 1-" STRINGIZE(NUM_CLIPS));
+    ConsoleIoSendString(STR_ENDLINE);
+    return COMMAND_PARAMETER_ERROR;
+  }
+
+  appSetAudioClipUsed((uint8_t)parameterInt);
+  ConsoleIoSendString(STR_ENDLINE);
+  ConsoleIoSendString("Audio clip used flag set");
+  ConsoleIoSendString(STR_ENDLINE);
+
+  return result;
+}
+
+
 static eCommandResult_T ConsoleCommandSetAudioStartSample(const char buffer[])
 {
   int16_t parameterInt;
@@ -286,10 +348,10 @@ static eCommandResult_T ConsoleCommandSetAudioStartSample(const char buffer[])
     return result;
   }
 
-  if (parameterInt < 0 || parameterInt > 16000)
+  if (parameterInt < 0 || parameterInt > MAX_SAMPLE_IDX)
   {
     ConsoleIoSendString(STR_ENDLINE);
-    ConsoleIoSendString("Audio start sample must be 0-16000");
+    ConsoleIoSendString("Audio start sample must be 0-" STRINGIZE(MAX_SAMPLE_IDX));
     ConsoleIoSendString(STR_ENDLINE);
     return COMMAND_PARAMETER_ERROR;
   }
@@ -313,10 +375,10 @@ static eCommandResult_T ConsoleCommandSetAudioEndSample(const char buffer[])
     return result;
   }
 
-  if (parameterInt < 0 || parameterInt > 16000)
+  if (parameterInt < 0 || parameterInt > MAX_SAMPLE_IDX)
   {
     ConsoleIoSendString(STR_ENDLINE);
-    ConsoleIoSendString("Audio end sample must be 0-16000");
+    ConsoleIoSendString("Audio end sample must be 0-" STRINGIZE(MAX_SAMPLE_IDX));
     ConsoleIoSendString(STR_ENDLINE);
     return COMMAND_PARAMETER_ERROR;
   }
@@ -422,9 +484,9 @@ static eCommandResult_T ConsoleCommandSetAudioChannelParams(const char buffer[])
   {
     return result;
   }
-  if (parameterInt < 0 || parameterInt > 2)
+  if (parameterInt < 0 || parameterInt > MAX_CHANNEL_IDX)
   {
-    ConsoleIoSendString("Channel index must be 0-2");
+    ConsoleIoSendString("Channel index must be 0-" STRINGIZE(MAX_CHANNEL_IDX));
     ConsoleIoSendString(STR_ENDLINE);
     return COMMAND_PARAMETER_ERROR;
   }
@@ -435,9 +497,9 @@ static eCommandResult_T ConsoleCommandSetAudioChannelParams(const char buffer[])
   {
     return result;
   }
-  if (parameterInt < 1 || parameterInt > 50)
+  if (parameterInt < 1 || parameterInt > NUM_CLIPS)
   {
-    ConsoleIoSendString("Audio clip number must be 1-50");
+    ConsoleIoSendString("Audio clip number must be 1-" STRINGIZE(NUM_CLIPS));
     ConsoleIoSendString(STR_ENDLINE);
     return COMMAND_PARAMETER_ERROR;
   }
@@ -448,9 +510,9 @@ static eCommandResult_T ConsoleCommandSetAudioChannelParams(const char buffer[])
   {
     return result;
   }
-  if (parameterInt < 0 || parameterInt > CLIP_SAMPLES)
+  if (parameterInt < 0 || parameterInt > MAX_SAMPLE_IDX)
   {
-    ConsoleIoSendString("Audio start sample must be 0-16000");
+    ConsoleIoSendString("Audio start sample must be 0-" STRINGIZE(MAX_SAMPLE_IDX));
     ConsoleIoSendString(STR_ENDLINE);
     return COMMAND_PARAMETER_ERROR;
   }
@@ -461,9 +523,9 @@ static eCommandResult_T ConsoleCommandSetAudioChannelParams(const char buffer[])
   {
     return result;
   }
-  if (parameterInt < 0 || parameterInt > CLIP_SAMPLES)
+  if (parameterInt < 0 || parameterInt > MAX_SAMPLE_IDX)
   {
-    ConsoleIoSendString("Audio end sample must be 0-16000");
+    ConsoleIoSendString("Audio end sample must be 0-" STRINGIZE(MAX_SAMPLE_IDX));
     ConsoleIoSendString(STR_ENDLINE);
     return COMMAND_PARAMETER_ERROR;
   }
@@ -507,9 +569,9 @@ static eCommandResult_T ConsoleCommandGetAudioChannelParams(const char buffer[])
   {
     return result;
   }
-  if (parameterInt < 0 || parameterInt > 2)
+  if (parameterInt < 0 || parameterInt > MAX_CHANNEL_IDX)
   {
-    ConsoleIoSendString("Channel index must be 0-2");
+    ConsoleIoSendString("Channel index must be 0-" STRINGIZE(MAX_CHANNEL_IDX));
     ConsoleIoSendString(STR_ENDLINE);
     return COMMAND_PARAMETER_ERROR;
   }
@@ -555,9 +617,9 @@ static eCommandResult_T ConsoleCommandSetAudioChannelRunning(const char buffer[]
   {
     return result;
   }
-  if (parameterInt < 0 || parameterInt > 2)
+  if (parameterInt < 0 || parameterInt > MAX_CHANNEL_IDX)
   {
-    ConsoleIoSendString("Channel index must be 0-2");
+    ConsoleIoSendString("Channel index must be 0-" STRINGIZE(MAX_CHANNEL_IDX));
     ConsoleIoSendString(STR_ENDLINE);
     return COMMAND_PARAMETER_ERROR;
   }
@@ -631,9 +693,9 @@ static eCommandResult_T ConsoleCommandSetAudioChannelStepParams(const char buffe
   {
     return result;
   }
-  if (parameterInt < 0 || parameterInt > 2)
+  if (parameterInt < 0 || parameterInt > MAX_CHANNEL_IDX)
   {
-    ConsoleIoSendString("Channel index must be 0-2");
+    ConsoleIoSendString("Channel index must be 0-" STRINGIZE(MAX_CHANNEL_IDX));
     ConsoleIoSendString(STR_ENDLINE);
     return COMMAND_PARAMETER_ERROR;
   }
@@ -644,9 +706,9 @@ static eCommandResult_T ConsoleCommandSetAudioChannelStepParams(const char buffe
   {
     return result;
   }
-  if (parameterInt < 0 || parameterInt > 15)
+  if (parameterInt < 0 || parameterInt > MAX_STEP_IDX)
   {
-    ConsoleIoSendString("Step must be 0-15");
+    ConsoleIoSendString("Step must be 0-" STRINGIZE(MAX_STEP_IDX));
     ConsoleIoSendString(STR_ENDLINE);
     return COMMAND_PARAMETER_ERROR;
   }
@@ -657,9 +719,9 @@ static eCommandResult_T ConsoleCommandSetAudioChannelStepParams(const char buffe
   {
     return result;
   }
-  if (parameterInt < 0 || parameterInt > 50)
+  if (parameterInt < 0 || parameterInt > NUM_CLIPS)
   {
-    ConsoleIoSendString("Audio clip number must be 0-50");
+    ConsoleIoSendString("Audio clip number must be 0-" STRINGIZE(NUM_CLIPS));
     ConsoleIoSendString(STR_ENDLINE);
     return COMMAND_PARAMETER_ERROR;
   }
@@ -670,9 +732,9 @@ static eCommandResult_T ConsoleCommandSetAudioChannelStepParams(const char buffe
   {
     return result;
   }
-  if (parameterInt < 0 || parameterInt > CLIP_SAMPLES)
+  if (parameterInt < 0 || parameterInt > MAX_SAMPLE_IDX)
   {
-    ConsoleIoSendString("Audio start sample must be 0-16000");
+    ConsoleIoSendString("Audio start sample must be 0-" STRINGIZE(MAX_SAMPLE_IDX));
     ConsoleIoSendString(STR_ENDLINE);
     return COMMAND_PARAMETER_ERROR;
   }
@@ -683,9 +745,9 @@ static eCommandResult_T ConsoleCommandSetAudioChannelStepParams(const char buffe
   {
     return result;
   }
-  if (parameterInt < 0 || parameterInt > CLIP_SAMPLES)
+  if (parameterInt < 0 || parameterInt > MAX_SAMPLE_IDX)
   {
-    ConsoleIoSendString("Audio end sample must be 0-16000");
+    ConsoleIoSendString("Audio end sample must be 0-" STRINGIZE(MAX_SAMPLE_IDX));
     ConsoleIoSendString(STR_ENDLINE);
     return COMMAND_PARAMETER_ERROR;
   }
@@ -730,9 +792,9 @@ static eCommandResult_T ConsoleCommandGetAudioChannelStepParams(const char buffe
   {
     return result;
   }
-  if (parameterInt < 0 || parameterInt > 2)
+  if (parameterInt < 0 || parameterInt > MAX_CHANNEL_IDX)
   {
-    ConsoleIoSendString("Channel index must be 0-2");
+    ConsoleIoSendString("Channel index must be 0-" STRINGIZE(MAX_CHANNEL_IDX));
     ConsoleIoSendString(STR_ENDLINE);
     return COMMAND_PARAMETER_ERROR;
   }
@@ -743,9 +805,9 @@ static eCommandResult_T ConsoleCommandGetAudioChannelStepParams(const char buffe
   {
     return result;
   }
-  if (parameterInt < 0 || parameterInt > 15)
+  if (parameterInt < 0 || parameterInt > MAX_STEP_IDX)
   {
-    ConsoleIoSendString("Step must be 0-15");
+    ConsoleIoSendString("Step must be 0-" STRINGIZE(MAX_STEP_IDX));
     ConsoleIoSendString(STR_ENDLINE);
     return COMMAND_PARAMETER_ERROR;
   }

@@ -201,15 +201,15 @@ static bool getUIValueBool(int16_t uiValueType)
 static void uiAudioClipChange(int16_t changeAmt)
 {
   ChannelParams_T params = appGetAudioChannelParams(0);
-  if (changeAmt > 0 && params.clipNum + changeAmt > 50) {
-    params.clipNum = 50;
-  } else if (changeAmt < 0 && params.clipNum + changeAmt < 0) {
-    params.clipNum = 0;
+  if (changeAmt > 0 && params.clipNum + changeAmt > NUM_CLIPS) {
+    params.clipNum = NUM_CLIPS;
+  } else if (changeAmt < 0 && params.clipNum + changeAmt < 1) {
+    params.clipNum = 1;
   } else {
     params.clipNum += changeAmt;
   }
   params.startSample = 0;
-  params.endSample = CLIP_SAMPLES - 1;
+  params.endSample = MAX_SAMPLE_IDX;
   params.loop = false;
   appSetAudioChannelParams(0, params);
   if (menuIdx == AUDIO_CLIP_PLAY_MENU) {
@@ -222,8 +222,8 @@ static void uiAudioClipChange(int16_t changeAmt)
 static void uiAudioStartChange(int16_t changeAmt)
 {
   ChannelParams_T params = appGetAudioChannelParams(0);
-  if (changeAmt > 0 && params.startSample + changeAmt >= CLIP_SAMPLES - 2) {
-    params.startSample = CLIP_SAMPLES - 2;
+  if (changeAmt > 0 && params.startSample + changeAmt > MAX_SAMPLE_IDX - 1) {
+    params.startSample = MAX_SAMPLE_IDX - 1;
   } else if (changeAmt < 0 && params.startSample + changeAmt < 0) {
     params.startSample = 0;
   } else if (params.startSample + changeAmt > params.endSample) {
@@ -239,8 +239,8 @@ static void uiAudioStartChange(int16_t changeAmt)
 static void uiAudioEndChange(int16_t changeAmt)
 {
   ChannelParams_T params = appGetAudioChannelParams(0);
-  if (changeAmt > 0 && params.endSample + changeAmt >= CLIP_SAMPLES - 1) {
-    params.endSample = CLIP_SAMPLES - 1;
+  if (changeAmt > 0 && params.endSample + changeAmt > MAX_SAMPLE_IDX) {
+    params.endSample = MAX_SAMPLE_IDX;
   } else if (changeAmt < 0 && params.endSample + changeAmt < 0) {
     params.endSample = 0;
   } else if (params.endSample + changeAmt < params.startSample) {
@@ -264,8 +264,8 @@ static void uiAudioLoopToggle(void)
 
 static void uiSequenceChannelChange(int16_t changeAmt)
 {
-  if (changeAmt > 0 && sequenceChannel + changeAmt >= NUM_CHANNELS) {
-    sequenceChannel = NUM_CHANNELS - 1;
+  if (changeAmt > 0 && sequenceChannel + changeAmt > MAX_CHANNEL_IDX) {
+    sequenceChannel = MAX_CHANNEL_IDX;
   } else if (changeAmt < 0 && sequenceChannel + changeAmt < 0) {
     sequenceChannel = 0;
   } else {
@@ -277,8 +277,8 @@ static void uiSequenceChannelChange(int16_t changeAmt)
 
 static void uiSequenceStepChange(int16_t changeAmt)
 {
-  if (changeAmt > 0 && sequenceStep + changeAmt >= NUM_STEPS) {
-    sequenceStep = NUM_STEPS - 1;
+  if (changeAmt > 0 && sequenceStep + changeAmt > MAX_STEP_IDX) {
+    sequenceStep = MAX_STEP_IDX;
   } else if (changeAmt < 0 && sequenceStep + changeAmt < 0) {
     sequenceStep = 0;
   } else {
@@ -291,15 +291,15 @@ static void uiSequenceStepChange(int16_t changeAmt)
 static void uiSequenceClipChange(int16_t changeAmt)
 {
   ChannelParams_T params = appGetSequenceStepChannelParams(sequenceStep, sequenceChannel);
-  if (changeAmt > 0 && params.clipNum + changeAmt > 50) {
-    params.clipNum = 50;
+  if (changeAmt > 0 && params.clipNum + changeAmt > NUM_CLIPS) {
+    params.clipNum = NUM_CLIPS;
   } else if (changeAmt < 0 && params.clipNum + changeAmt < 0) {
     params.clipNum = 0;
   } else {
     params.clipNum += changeAmt;
   }
   params.startSample = 0;
-  params.endSample = CLIP_SAMPLES - 1;
+  params.endSample = MAX_SAMPLE_IDX;
   appSetSequenceStepChannelParams(sequenceStep, sequenceChannel, params);
   uiValueChangeCB(UI_SEQ_CLIP | UI_SEQ_CLIP_START | UI_SEQ_CLIP_END);
 }
@@ -308,8 +308,8 @@ static void uiSequenceClipChange(int16_t changeAmt)
 static void uiSequenceStartChange(int16_t changeAmt)
 {
   ChannelParams_T params = appGetSequenceStepChannelParams(sequenceStep, sequenceChannel);
-  if (changeAmt > 0 && params.startSample + changeAmt >= CLIP_SAMPLES - 2) {
-    params.startSample = CLIP_SAMPLES - 2;
+  if (changeAmt > 0 && params.startSample + changeAmt > MAX_SAMPLE_IDX - 1) {
+    params.startSample = MAX_SAMPLE_IDX - 1;
   } else if (changeAmt < 0 && params.startSample + changeAmt < 0) {
     params.startSample = 0;
   } else if (params.startSample + changeAmt > params.endSample) {
@@ -325,8 +325,8 @@ static void uiSequenceStartChange(int16_t changeAmt)
 static void uiSequenceEndChange(int16_t changeAmt)
 {
   ChannelParams_T params = appGetSequenceStepChannelParams(sequenceStep, sequenceChannel);
-  if (changeAmt > 0 && params.endSample + changeAmt >= CLIP_SAMPLES - 1) {
-    params.endSample = CLIP_SAMPLES - 1;
+  if (changeAmt > 0 && params.endSample + changeAmt > MAX_SAMPLE_IDX) {
+    params.endSample = MAX_SAMPLE_IDX;
   } else if (changeAmt < 0 && params.endSample + changeAmt < 0) {
     params.endSample = 0;
   } else if (params.endSample + changeAmt < params.startSample) {
@@ -343,7 +343,7 @@ static void renderMenuItem(uint8_t itemPos, const char *str, itemTypeT itemType,
 {
   uint16_t y = MENU_Y_OFFSET + itemPos * MENU_ITEM_HEIGHT;
 
-  char valStr[] = "     ";
+  char valStr[] = "      ";
 
   switch (itemType) {
   case INT_VALUE:
@@ -354,6 +354,13 @@ static void renderMenuItem(uint8_t itemPos, const char *str, itemTypeT itemType,
       uint16_t divisor = expnt(i);
       uint8_t digit = (val / divisor) % 10;
       valStr[numDigits - i - 1] = '0' + digit;
+    }
+
+    // FIXME: This doesn't really belong here.
+    // This function shouldn't know about special conditions for different value types.
+    // Perhaps a pointer to the function to call should be passed in.
+    if (uiValueType == UI_CLIP && appGetAudioClipUsed((uint8_t) val)) {
+	valStr[5] = '*';
     }
     break;
   case BOOL_VALUE:

@@ -12,7 +12,7 @@
 static I2S_HandleTypeDef *i2sMic;
 static I2S_HandleTypeDef *i2sDAC;
 
-static int16_t audio[CLIP_SAMPLES];
+static int16_t audio[CLIP_SAMPLES + 1]; // +1 to allow for used flag after audio data
 static int16_t buffer[I2S_BUFFER_SIZE];
 
 static volatile int16_t *bufferPtr = &buffer[0];
@@ -249,7 +249,7 @@ void audioStop(void)
 
 void audioSetClipNum(uint8_t audioClipNum)
 {
-  if (audioClipNum < 1 || audioClipNum > 50) {
+  if (audioClipNum < 1 || audioClipNum > NUM_CLIPS) {
     return;
   }
   channelParams[0].clipNum = audioClipNum;
@@ -264,7 +264,7 @@ uint8_t audioGetClipNum(void)
 
 void audioSetStartSample(uint16_t startSample)
 {
-  if (startSample > CLIP_SAMPLES) {
+  if (startSample > MAX_SAMPLE_IDX) {
     return;
   }
   if (startSample >= channelParams[0].endSample) {
@@ -276,7 +276,7 @@ void audioSetStartSample(uint16_t startSample)
 
 void audioSetEndSample(uint16_t endSample)
 {
-  if (endSample > CLIP_SAMPLES) {
+  if (endSample > MAX_SAMPLE_IDX) {
     return;
   }
   if (endSample <= channelParams[0].startSample) {
@@ -297,7 +297,8 @@ void audioStore(void)
   uint8_t blockIdx = channelParams[0].clipNum - 1;
 
   flashEraseBlock(blockIdx);
-  flashWriteData(blockIdx, (uint8_t *) audio, CLIP_SAMPLES*2);
+  audio[CLIP_SAMPLES] = 0x00AA;  // Set used flag
+  flashWriteData(blockIdx, (uint8_t *) audio, (CLIP_SAMPLES*2) + 1);
 }
 
 
@@ -305,7 +306,7 @@ void audioLoad(void)
 {
   uint8_t blockIdx = channelParams[0].clipNum - 1;
 
-  flashReadData(blockIdx, (uint8_t *) audio, CLIP_SAMPLES*2);
+  flashReadData(blockIdx, (uint8_t *) audio, (CLIP_SAMPLES*2) + 1);
 }
 
 
@@ -341,4 +342,30 @@ void audioSetChannelRunning(uint8_t channelIdx, bool runningState)
 bool getAudioRunning(void)
 {
   return audioRunning;
+}
+
+
+bool audioClipUsed(uint8_t audioClipNum)
+{
+  uint8_t clipUsed;
+  flashReadDataOffset(
+      audioClipNum - 1,
+      &clipUsed,
+      CLIP_SAMPLES*2,
+      1
+  );
+  return clipUsed == 0xAA;
+}
+
+
+void audioSetClipUsed(uint8_t audioClipNum)
+{
+  // Retrospectively set used flag for audio clip
+  // In order to write updated value we need to erase and then re-write block
+  // Read audio clip into memory
+  // Erase block
+  // Write audio clip back to flash with used flag set
+  audioSetClipNum(audioClipNum);
+  audioLoad();
+  audioStore();
 }

@@ -157,6 +157,18 @@ uint8_t appGetAudioClipNum(void)
 }
 
 
+bool appGetAudioClipUsed(uint8_t audioClipNum)
+{
+  return audioClipUsed(audioClipNum);
+}
+
+
+void appSetAudioClipUsed(uint8_t audioClipNum)
+{
+  audioSetClipUsed(audioClipNum);
+}
+
+
 void appSetAudioStartSample(uint16_t startSample)
 {
   audioSetStartSample(startSample);

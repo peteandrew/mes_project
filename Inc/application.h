@@ -5,6 +5,8 @@
 #include "stm32f4xx_hal.h"
 #include "audioTypes.h"
 
+#define STRINGIZE_DETAIL_(v) #v
+#define STRINGIZE(v) STRINGIZE_DETAIL_(v)
 
 void appInit(I2S_HandleTypeDef *i2sMicH, I2S_HandleTypeDef *i2sDACH, SPI_HandleTypeDef *spiFlashH, TIM_HandleTypeDef *stepTimerH, TIM_HandleTypeDef *encTimerH, TIM_HandleTypeDef *inputTimerH);
 void appLoop(void);
@@ -16,6 +18,8 @@ void appPlayAudioFromFlash(void);
 void appStopAudio(void);
 void appSetAudioClipNum(uint8_t audioClipNum);
 uint8_t appGetAudioClipNum(void);
+bool appGetAudioClipUsed(uint8_t audioClipNum);
+void appSetAudioClipUsed(uint8_t audioClipNum);
 void appSetAudioStartSample(uint16_t startSample);
 void appSetAudioEndSample(uint16_t startSample);
 void appSetAudioLoop(bool loop);

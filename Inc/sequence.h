@@ -5,6 +5,7 @@
 #include "ui_values.h"
 
 #define NUM_STEPS 16
+#define MAX_STEP_IDX NUM_STEPS-1
 
 void sequenceInit(uiChangeCallback _uiChangeCB);
 ChannelParams_T getStepChannelParams(uint8_t channelIdx, uint8_t stepIdx);

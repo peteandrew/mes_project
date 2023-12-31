@@ -19,8 +19,8 @@
 //  - Move sequence code out of application.c
 //  - Storing of sequences
 //    - Add store menu option
-//  - Add used flag to audio clips
-//    - display used state in record audio clip menu
+//  - Fix DAC noise when recording
+//    - separate DMA buffers for record and play. fill play buffer with zeros when recording
 //  - Single state variable for audio control
 //  - Investigate improving LCD performance - increase buffer size?
 //  - Remove separate audio clip control functions
