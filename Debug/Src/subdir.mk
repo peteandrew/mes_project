@@ -17,7 +17,8 @@ C_SRCS += \
 ../Src/stm32f4xx_it.c \
 ../Src/syscalls.c \
 ../Src/sysmem.c \
-../Src/system_stm32f4xx.c 
+../Src/system_stm32f4xx.c \
+../Src/ui.c 
 
 OBJS += \
 ./Src/application.o \
@@ -32,7 +33,8 @@ OBJS += \
 ./Src/stm32f4xx_it.o \
 ./Src/syscalls.o \
 ./Src/sysmem.o \
-./Src/system_stm32f4xx.o 
+./Src/system_stm32f4xx.o \
+./Src/ui.o 
 
 C_DEPS += \
 ./Src/application.d \
@@ -47,7 +49,8 @@ C_DEPS += \
 ./Src/stm32f4xx_it.d \
 ./Src/syscalls.d \
 ./Src/sysmem.d \
-./Src/system_stm32f4xx.d 
+./Src/system_stm32f4xx.d \
+./Src/ui.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes
@@ -57,7 +60,7 @@ Src/%.o Src/%.su Src/%.cyclo: ../Src/%.c Src/subdir.mk
 clean: clean-Src
 
 clean-Src:
-	-$(RM) ./Src/application.cyclo ./Src/application.d ./Src/application.o ./Src/application.su ./Src/audio.cyclo ./Src/audio.d ./Src/audio.o ./Src/audio.su ./Src/console.cyclo ./Src/console.d ./Src/console.o ./Src/console.su ./Src/consoleCommands.cyclo ./Src/consoleCommands.d ./Src/consoleCommands.o ./Src/consoleCommands.su ./Src/consoleIo.cyclo ./Src/consoleIo.d ./Src/consoleIo.o ./Src/consoleIo.su ./Src/flash.cyclo ./Src/flash.d ./Src/flash.o ./Src/flash.su ./Src/main.cyclo ./Src/main.d ./Src/main.o ./Src/main.su ./Src/sequence.cyclo ./Src/sequence.d ./Src/sequence.o ./Src/sequence.su ./Src/stm32f4xx_hal_msp.cyclo ./Src/stm32f4xx_hal_msp.d ./Src/stm32f4xx_hal_msp.o ./Src/stm32f4xx_hal_msp.su ./Src/stm32f4xx_it.cyclo ./Src/stm32f4xx_it.d ./Src/stm32f4xx_it.o ./Src/stm32f4xx_it.su ./Src/syscalls.cyclo ./Src/syscalls.d ./Src/syscalls.o ./Src/syscalls.su ./Src/sysmem.cyclo ./Src/sysmem.d ./Src/sysmem.o ./Src/sysmem.su ./Src/system_stm32f4xx.cyclo ./Src/system_stm32f4xx.d ./Src/system_stm32f4xx.o ./Src/system_stm32f4xx.su
+	-$(RM) ./Src/application.cyclo ./Src/application.d ./Src/application.o ./Src/application.su ./Src/audio.cyclo ./Src/audio.d ./Src/audio.o ./Src/audio.su ./Src/console.cyclo ./Src/console.d ./Src/console.o ./Src/console.su ./Src/consoleCommands.cyclo ./Src/consoleCommands.d ./Src/consoleCommands.o ./Src/consoleCommands.su ./Src/consoleIo.cyclo ./Src/consoleIo.d ./Src/consoleIo.o ./Src/consoleIo.su ./Src/flash.cyclo ./Src/flash.d ./Src/flash.o ./Src/flash.su ./Src/main.cyclo ./Src/main.d ./Src/main.o ./Src/main.su ./Src/sequence.cyclo ./Src/sequence.d ./Src/sequence.o ./Src/sequence.su ./Src/stm32f4xx_hal_msp.cyclo ./Src/stm32f4xx_hal_msp.d ./Src/stm32f4xx_hal_msp.o ./Src/stm32f4xx_hal_msp.su ./Src/stm32f4xx_it.cyclo ./Src/stm32f4xx_it.d ./Src/stm32f4xx_it.o ./Src/stm32f4xx_it.su ./Src/syscalls.cyclo ./Src/syscalls.d ./Src/syscalls.o ./Src/syscalls.su ./Src/sysmem.cyclo ./Src/sysmem.d ./Src/sysmem.o ./Src/sysmem.su ./Src/system_stm32f4xx.cyclo ./Src/system_stm32f4xx.d ./Src/system_stm32f4xx.o ./Src/system_stm32f4xx.su ./Src/ui.cyclo ./Src/ui.d ./Src/ui.o ./Src/ui.su
 
 .PHONY: clean-Src
 

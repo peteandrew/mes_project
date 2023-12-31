@@ -29,5 +29,7 @@ void appStartSequence(void);
 void appStopSequence(void);
 void appSetSequenceStepChannelParams(uint8_t stepIdx, uint8_t channelIdx, ChannelParams_T params);
 ChannelParams_T appGetSequenceStepChannelParams(uint8_t stepIdx, uint8_t channelIdx);
+void appToggleClipPlay(void);
+void appToggleSequencePlay(void);
 
 #endif

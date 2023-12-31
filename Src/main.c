@@ -16,14 +16,15 @@
   ******************************************************************************
   */
 
+//  - Move sequence code out of application.c
+//  - Storing of sequences
+//    - Add store menu option
+//  - Add used flag to audio clips
+//    - display used state in record audio clip menu
+//  - Single state variable for audio control
 //  - Investigate improving LCD performance - increase buffer size?
 //  - Remove separate audio clip control functions
 //    - Replace calls with calls to change audio channel 1 params
-//  - Storing of sequences
-//    - Add store menu option
-//  - Move UI code into separate module
-//  - Add used flag to audio clips
-//    - display used state in record audio clip menu
 //  - Change menu options when clip has been recorded
 //    - display play and store options
 //  - Flash LED with beats
