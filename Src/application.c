@@ -26,7 +26,6 @@ static volatile uint16_t previousCount;
 static volatile int16_t countChange = 0;
 static volatile bool tempButtonPressed = false;
 static volatile bool buttonPressed = false;
-static bool sequencePlaying = false;
 static volatile bool triggerStep = false;
 
 
@@ -91,14 +90,6 @@ void appLoop(void)
     audioProcessData();
 
     if (triggerStep) {
-      for (int i=0; i < NUM_CHANNELS; i++) {
-        ChannelParams_T params = getCurrStepChannelParams(i);
-        if (params.clipNum > 0) {
-          audioSetChannelParams(i, params);
-          audioSetChannelRunning(i, true);
-        }
-      }
-
       step();
       triggerStep = false;
     }
@@ -225,23 +216,16 @@ void appSetAudioChannelRunning(uint8_t channelIdx, bool runningState)
 
 void appStartSequence(void)
 {
-  setStepIdx(0);
-  audioPlayFromFlash();
-  // Initially set all channels to not playing
-  for (int i=0; i < NUM_CHANNELS; i++) {
-    audioSetChannelRunning(i, false);
-  }
+  sequenceStart();
   HAL_TIM_Base_Start_IT(stepTimer);
   triggerStep = true;
-  sequencePlaying = true;
 }
 
 
 void appStopSequence(void)
 {
-  audioStop();
+  sequenceStop();
   HAL_TIM_Base_Stop_IT(stepTimer);
-  sequencePlaying = false;
 }
 
 
@@ -269,9 +253,39 @@ void appToggleClipPlay(void)
 
 void appToggleSequencePlay(void)
 {
-  if (sequencePlaying) {
+  if (getSequencePlaying()) {
     appStopSequence();
   } else {
     appStartSequence();
   }
+}
+
+
+void appSetSequenceNum(uint8_t sequenceNum)
+{
+  sequenceSetNum(sequenceNum);
+}
+
+
+uint8_t appGetSequenceNum(void)
+{
+  return sequenceGetNum();
+}
+
+
+void appStoreSequence(void)
+{
+  sequenceStore();
+}
+
+
+void appLoadSequence(void)
+{
+  sequenceLoad();
+}
+
+
+bool appGetSequenceUsed(void)
+{
+  return getSequenceUsed();
 }

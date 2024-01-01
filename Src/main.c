@@ -16,9 +16,6 @@
   ******************************************************************************
   */
 
-//  - Move sequence code out of application.c
-//  - Storing of sequences
-//    - Add store menu option
 //  - Fix DAC noise when recording
 //    - separate DMA buffers for record and play. fill play buffer with zeros when recording
 //  - Single state variable for audio control

@@ -46,6 +46,11 @@ static eCommandResult_T ConsoleCommandStartSequence(const char buffer[]);
 static eCommandResult_T ConsoleCommandStopSequence(const char buffer[]);
 static eCommandResult_T ConsoleCommandSetAudioChannelStepParams(const char buffer[]);
 static eCommandResult_T ConsoleCommandGetAudioChannelStepParams(const char buffer[]);
+static eCommandResult_T ConsoleCommandSetSequenceNum(const char buffer[]);
+static eCommandResult_T ConsoleCommandGetSequenceNum(const char buffer[]);
+static eCommandResult_T ConsoleCommandStoreSequence(const char buffer[]);
+static eCommandResult_T ConsoleCommandLoadSequence(const char buffer[]);
+static eCommandResult_T ConsoleCommandGetSequenceUsed(const char buffer[]);
 
 
 static const sConsoleCommandTable_T mConsoleCommandTable[] =
@@ -78,7 +83,11 @@ static const sConsoleCommandTable_T mConsoleCommandTable[] =
     {"stopseq", &ConsoleCommandStopSequence, HELP("Stop sequence")},
     {"schsparams", &ConsoleCommandSetAudioChannelStepParams, HELP("Set audio channel step params")},
     {"gchsparams", &ConsoleCommandGetAudioChannelStepParams, HELP("Get audio channel step params")},
-
+    {"seqset", &ConsoleCommandSetSequenceNum, HELP("Set sequence number")},
+    {"seqget", &ConsoleCommandGetSequenceNum, HELP("Get sequence number")},
+    {"seqstore", &ConsoleCommandStoreSequence, HELP("Store sequence")},
+    {"seqload", &ConsoleCommandLoadSequence, HELP("Load sequence")},
+    {"seqused", &ConsoleCommandGetSequenceUsed, HELP("Load sequence")},
 
   CONSOLE_COMMAND_TABLE_END // must be LAST
 };
@@ -829,6 +838,99 @@ static eCommandResult_T ConsoleCommandGetAudioChannelStepParams(const char buffe
 
   ConsoleIoSendString("Loop: ");
   if (params.loop) {
+    ConsoleIoSendString("Yes");
+  } else {
+    ConsoleIoSendString("No");
+  }
+  ConsoleIoSendString(STR_ENDLINE);
+
+  return result;
+}
+
+
+static eCommandResult_T ConsoleCommandSetSequenceNum(const char buffer[])
+{
+  int16_t parameterInt;
+  eCommandResult_T result;
+  result = ConsoleReceiveParamInt16(buffer, 1, &parameterInt);
+  if (result != COMMAND_SUCCESS)
+  {
+    return result;
+  }
+
+  if (parameterInt < 1 || parameterInt > NUM_SEQUENCES)
+  {
+    ConsoleIoSendString(STR_ENDLINE);
+    ConsoleIoSendString("Sequence number must be 1-" STRINGIZE(NUM_SEQUENCES));
+    ConsoleIoSendString(STR_ENDLINE);
+    return COMMAND_PARAMETER_ERROR;
+  }
+
+  appSetSequenceNum((uint8_t)parameterInt);
+  ConsoleIoSendString(STR_ENDLINE);
+  ConsoleIoSendString("Sequence number set");
+  ConsoleIoSendString(STR_ENDLINE);
+
+  return result;
+}
+
+
+static eCommandResult_T ConsoleCommandGetSequenceNum(const char buffer[])
+{
+  eCommandResult_T result = COMMAND_SUCCESS;
+
+    IGNORE_UNUSED_VARIABLE(buffer);
+
+  ConsoleIoSendString(STR_ENDLINE);
+  ConsoleIoSendString("Sequence number: ");
+  ConsoleSendParamUInt8(appGetSequenceNum());
+  ConsoleIoSendString(STR_ENDLINE);
+
+  return result;
+}
+
+
+static eCommandResult_T ConsoleCommandStoreSequence(const char buffer[])
+{
+  eCommandResult_T result = COMMAND_SUCCESS;
+
+    IGNORE_UNUSED_VARIABLE(buffer);
+
+  ConsoleIoSendString("Storing sequence");
+  ConsoleIoSendString(STR_ENDLINE);
+  appStoreSequence();
+  ConsoleIoSendString("Sequence stored");
+  ConsoleIoSendString(STR_ENDLINE);
+
+  return result;
+}
+
+
+static eCommandResult_T ConsoleCommandLoadSequence(const char buffer[])
+{
+  eCommandResult_T result = COMMAND_SUCCESS;
+
+    IGNORE_UNUSED_VARIABLE(buffer);
+
+  ConsoleIoSendString("Loading sequence");
+  ConsoleIoSendString(STR_ENDLINE);
+  appLoadSequence();
+  ConsoleIoSendString("Sequence loaded");
+  ConsoleIoSendString(STR_ENDLINE);
+
+  return result;
+}
+
+
+static eCommandResult_T ConsoleCommandGetSequenceUsed(const char buffer[])
+{
+  eCommandResult_T result = COMMAND_SUCCESS;
+
+    IGNORE_UNUSED_VARIABLE(buffer);
+
+  ConsoleIoSendString(STR_ENDLINE);
+  ConsoleIoSendString("Sequence used: ");
+  if (appGetSequenceUsed()) {
     ConsoleIoSendString("Yes");
   } else {
     ConsoleIoSendString("No");

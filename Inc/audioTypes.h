@@ -21,5 +21,6 @@ typedef struct {
   uint16_t endSample;
   bool loop;
 } ChannelParams_T;
+// ChannelParams_T size: 48 bytes
 
 #endif

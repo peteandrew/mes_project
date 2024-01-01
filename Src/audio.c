@@ -75,7 +75,7 @@ void audioInit(I2S_HandleTypeDef *i2sMicH, I2S_HandleTypeDef *i2sDACH, uiChangeC
     channelParams[i].clipNum = 1;
     channelParams[i].startSample = 0;
     channelParams[i].endSample = CLIP_SAMPLES - 1;
-    channelParams[i].loop = true;
+    channelParams[i].loop = false;
     sampleIndexes[i] = 0;
     channelRunning[i] = false;
   }
@@ -114,7 +114,7 @@ void audioProcessData(void)
       // We read I2S_BUFFER_SIZE/2 bytes so I2S_BUFFER_SIZE/4 samples (samples are 16 bits each)
       // This is enough to fill half the buffer as each sample is duplicated for left and right channels
       if (channelRunning[channelIdx]) {
-        flashReadDataOffset(
+        flashReadDataBlockOffset(
             channelParams[channelIdx].clipNum - 1,
             (uint8_t *) &audio[channelIdx * (I2S_BUFFER_SIZE / 2)],
             sampleIndexes[channelIdx] * 2,
@@ -298,7 +298,7 @@ void audioStore(void)
 
   flashEraseBlock(blockIdx);
   audio[CLIP_SAMPLES] = 0x00AA;  // Set used flag
-  flashWriteData(blockIdx, (uint8_t *) audio, (CLIP_SAMPLES*2) + 1);
+  flashWriteDataBlock(blockIdx, (uint8_t *) audio, (CLIP_SAMPLES*2) + 1);
 }
 
 
@@ -306,7 +306,7 @@ void audioLoad(void)
 {
   uint8_t blockIdx = channelParams[0].clipNum - 1;
 
-  flashReadData(blockIdx, (uint8_t *) audio, (CLIP_SAMPLES*2) + 1);
+  flashReadDataBlock(blockIdx, (uint8_t *) audio, (CLIP_SAMPLES*2) + 1);
 }
 
 
@@ -348,7 +348,7 @@ bool getAudioRunning(void)
 bool audioClipUsed(uint8_t audioClipNum)
 {
   uint8_t clipUsed;
-  flashReadDataOffset(
+  flashReadDataBlockOffset(
       audioClipNum - 1,
       &clipUsed,
       CLIP_SAMPLES*2,

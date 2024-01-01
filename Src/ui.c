@@ -108,13 +108,14 @@ static menuT sequenceMenu = {
 
 static menuT sequenceEditMenu = {
   .title="Sequence Edit",
-  .numItems=6,
+  .numItems=7,
   .items={
       {"Channel", INT_VALUE, UI_SEQ_CHANNEL, false, NULL},
       {"Step", INT_VALUE, UI_SEQ_STEP, false, NULL},
       {"Clip", INT_VALUE, UI_SEQ_CLIP, false, NULL},
       {"Start", INT_VALUE, UI_SEQ_CLIP_START, false, NULL},
       {"End", INT_VALUE, UI_SEQ_CLIP_END, false, NULL},
+      {"Store", ACTION, 0, false, &appStoreSequence},
       {"Back", ACTION, 0, false, &switchSequenceMenu},
   }
 };
@@ -134,7 +135,6 @@ static int8_t itemSelectState = 0;
 static bool menuRenderRequired = true;
 static int16_t uiValuesChanged = 0;
 static bool buttonActioned = false;
-static uint8_t sequence = 0;
 static uint8_t sequenceChannel = 0;
 static uint8_t sequenceStep = 0;
 
@@ -172,7 +172,7 @@ static uint16_t getUIValueInt(int16_t uiValueType)
   case UI_CLIP_END:
     return appGetAudioChannelParams(0).endSample;
   case UI_SEQ:
-    return sequence;
+    return appGetSequenceNum();
   case UI_SEQ_CHANNEL:
     return sequenceChannel;
   case UI_SEQ_STEP:
@@ -259,6 +259,20 @@ static void uiAudioLoopToggle(void)
   params.loop = !params.loop;
   appSetAudioChannelParams(0, params);
   uiValueChangeCB(UI_CLIP_LOOP);
+}
+
+
+static void uiSequenceChange(int16_t changeAmt)
+{
+  uint8_t sequenceNum = appGetSequenceNum();
+  if (changeAmt > 0 && sequenceNum + changeAmt > NUM_SEQUENCES) {
+    sequenceNum = NUM_SEQUENCES;
+  } else if (changeAmt < 0 && sequenceNum + changeAmt < 1) {
+    sequenceNum = 1;
+  } else {
+    sequenceNum += changeAmt;
+  }
+  appSetSequenceNum(sequenceNum);
 }
 
 
@@ -360,6 +374,8 @@ static void renderMenuItem(uint8_t itemPos, const char *str, itemTypeT itemType,
     // This function shouldn't know about special conditions for different value types.
     // Perhaps a pointer to the function to call should be passed in.
     if (uiValueType == UI_CLIP && appGetAudioClipUsed((uint8_t) val)) {
+	valStr[5] = '*';
+    } else if (uiValueType == UI_SEQ && appGetSequenceUsed()) {
 	valStr[5] = '*';
     }
     break;
@@ -520,6 +536,9 @@ void uiUpdate(int16_t encCountChange, bool buttonPressed)
       break;
     case UI_CLIP_END:
       uiAudioEndChange(valChange);
+      break;
+    case UI_SEQ:
+      uiSequenceChange(valChange);
       break;
     case UI_SEQ_CHANNEL:
       uiSequenceChannelChange(valChange);
