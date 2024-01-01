@@ -13,9 +13,11 @@ static I2S_HandleTypeDef *i2sMic;
 static I2S_HandleTypeDef *i2sDAC;
 
 static int16_t audio[CLIP_SAMPLES + 1]; // +1 to allow for used flag after audio data
-static int16_t buffer[I2S_BUFFER_SIZE];
+static int16_t micBuffer[I2S_BUFFER_SIZE];
+static int16_t dacBuffer[I2S_BUFFER_SIZE];
 
-static volatile int16_t *bufferPtr = &buffer[0];
+static volatile int16_t *micBufferPtr = &micBuffer[0];
+static volatile int16_t *dacBufferPtr = &dacBuffer[0];
 static volatile bool readyForData;
 
 typedef enum {
@@ -38,28 +40,32 @@ static uiChangeCallback uiChangeCB;
 
 void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef *hi2s)
 {
-  bufferPtr = &buffer[0];
+  micBufferPtr = &micBuffer[0];
   readyForData = true;
 }
 
 
 void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s)
 {
-  bufferPtr = &buffer[I2S_BUFFER_SIZE/2];
+  micBufferPtr = &micBuffer[I2S_BUFFER_SIZE/2];
   readyForData = true;
 }
 
 
 void HAL_I2S_TxHalfCpltCallback(I2S_HandleTypeDef *hi2s)
 {
-  bufferPtr = &buffer[0];
+  dacBufferPtr = &dacBuffer[0];
+  // If we're recording we pause filling of the DAC buffer so don't signal for more data
+  if (audioState == AUDIO_RECORD) return;
   readyForData = true;
 }
 
 
 void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s)
 {
-  bufferPtr = &buffer[I2S_BUFFER_SIZE/2];
+  dacBufferPtr = &dacBuffer[I2S_BUFFER_SIZE/2];
+  // If we're recording we pause filling of the DAC buffer so don't signal for more data
+  if (audioState == AUDIO_RECORD) return;
   readyForData = true;
 }
 
@@ -69,7 +75,7 @@ void audioInit(I2S_HandleTypeDef *i2sMicH, I2S_HandleTypeDef *i2sDACH, uiChangeC
   i2sMic = i2sMicH;
   i2sDAC = i2sDACH;
 
-  HAL_I2S_Transmit_DMA(i2sDAC, (uint16_t *) buffer, I2S_BUFFER_SIZE);
+  HAL_I2S_Transmit_DMA(i2sDAC, (uint16_t *) dacBuffer, I2S_BUFFER_SIZE);
 
   for (int i=0; i < NUM_CHANNELS; i++) {
     channelParams[i].clipNum = 1;
@@ -101,7 +107,8 @@ void audioProcessData(void)
   }
   // When in AUDIO_RECORD or AUDIO_RAM_PLAY states only use channel 0
   int8_t channelIdx = 0;
-  // Sample index in to audio.
+
+  // Sample index in to audio array.
   // Follows sampleIndexes[0] for RAM recording and playback as we use entire contents of audio array.
   // Set back to 0 for playback from Flash as we only use I2S_BUFFER_SIZE/4 * NUM_CHANNELS of audio array.
   int16_t ramSampleIdx = 0;
@@ -150,7 +157,7 @@ void audioProcessData(void)
       // Only MIC left channel has data so we skip the right channel
       // We also only store the top 16 bits of each 24 bit sample
       // This has the effect of a crude re-sample to 16 bits
-      audio[ramSampleIdx] = bufferPtr[i];
+      audio[ramSampleIdx] = micBufferPtr[i];
     } else if (audioState == AUDIO_RAM_PLAY) {
       // FIXME: I think it should be possible to combine the code for AUDIO_RAM_PLAY and AUDIO_FLASH_PLAY
       // Maybe we just iterate over first channel instead of all channels for AUDIO_RAM_PLAY
@@ -161,8 +168,8 @@ void audioProcessData(void)
       } else {
         sample = 0;
       }
-      bufferPtr[i] = sample;
-      bufferPtr[i + 1] = sample;
+      dacBufferPtr[i] = sample;
+      dacBufferPtr[i + 1] = sample;
     } else {
       sample = 0;
       for (channelIdx = 0; channelIdx < NUM_CHANNELS; channelIdx++) {
@@ -170,8 +177,8 @@ void audioProcessData(void)
           sample += audio[ramSampleIdx + (channelIdx * (I2S_BUFFER_SIZE / 2))];
         }
       }
-      bufferPtr[i] = sample;
-      bufferPtr[i + 1] = sample;
+      dacBufferPtr[i] = sample;
+      dacBufferPtr[i + 1] = sample;
     }
 
     ramSampleIdx++;
@@ -203,13 +210,11 @@ void audioProcessData(void)
 void audioRecord(void)
 {
   HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
-  // Stop playing audio
-  HAL_I2S_DMAStop(i2sDAC);
   // Start recording audio
   // Receiving 32bit frames and buffer uses 16bit data size so receive size is half buffer size
   audioState = AUDIO_RECORD;
   sampleIndexes[0] = 0;
-  HAL_I2S_Receive_DMA(i2sMic, (uint16_t *) buffer, I2S_BUFFER_SIZE/2);
+  HAL_I2S_Receive_DMA(i2sMic, (uint16_t *) micBuffer, I2S_BUFFER_SIZE/2);
   audioRunning = true;
   uiChangeCB(UI_AUDIO_RUNNING);
 }
@@ -220,7 +225,7 @@ void audioPlay(void)
   audioState = AUDIO_RAM_PLAY;
   sampleIndexes[0] = 0;
   channelRunning[0] = true;
-  HAL_I2S_Transmit_DMA(i2sDAC, (uint16_t *) buffer, I2S_BUFFER_SIZE);
+  HAL_I2S_Transmit_DMA(i2sDAC, (uint16_t *) dacBuffer, I2S_BUFFER_SIZE);
   audioRunning = true;
   uiChangeCB(UI_AUDIO_RUNNING);
 }
@@ -231,7 +236,7 @@ void audioPlayFromFlash(void)
   audioState = AUDIO_FLASH_PLAY;
   sampleIndexes[0] = channelParams[0].startSample;
   channelRunning[0] = true;
-  HAL_I2S_Transmit_DMA(i2sDAC, (uint16_t *) buffer, I2S_BUFFER_SIZE);
+  HAL_I2S_Transmit_DMA(i2sDAC, (uint16_t *) dacBuffer, I2S_BUFFER_SIZE);
   audioRunning = true;
   uiChangeCB(UI_AUDIO_RUNNING);
 }

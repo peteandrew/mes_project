@@ -16,8 +16,6 @@
   ******************************************************************************
   */
 
-//  - Fix DAC noise when recording
-//    - separate DMA buffers for record and play. fill play buffer with zeros when recording
 //  - Single state variable for audio control
 //  - Investigate improving LCD performance - increase buffer size?
 //  - Remove separate audio clip control functions
