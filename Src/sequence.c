@@ -1,3 +1,4 @@
+#include "main.h"
 #include "sequence.h"
 #include "audioTypes.h"
 #include "audio.h"
@@ -94,6 +95,14 @@ void step()
       audioSetChannelParams(i, params);
       audioSetChannelRunning(i, true);
     }
+  }
+
+  // Turn on status LED on every beat
+  // (there are four steps - quarter beats - per beat)
+  if (currStep % 4 == 0) {
+      HAL_GPIO_WritePin(STATUS_LED_GPIO_Port, STATUS_LED_Pin, GPIO_PIN_SET);
+  } else {
+      HAL_GPIO_WritePin(STATUS_LED_GPIO_Port, STATUS_LED_Pin, GPIO_PIN_RESET);
   }
 
   if (++currStep >= NUM_STEPS) {

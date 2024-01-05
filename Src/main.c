@@ -19,7 +19,6 @@
 //  - Investigate improving LCD performance - increase buffer size?
 //  - Change menu options when clip has been recorded
 //    - display play and store options
-//  - Flash LED with beats
 //
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
