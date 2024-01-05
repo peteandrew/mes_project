@@ -77,7 +77,7 @@ void appInit(I2S_HandleTypeDef *i2sMicH, I2S_HandleTypeDef *i2sDACH, SPI_HandleT
   HAL_TIM_Encoder_Start_IT(encTimerH, TIM_CHANNEL_ALL);
   previousCount = encTimerH->Instance->CNT = 32767;
   uiInit();
-  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(STATUS_LED_GPIO_Port, STATUS_LED_Pin, GPIO_PIN_RESET);
   inputTimer = inputTimerH;
 }
 
@@ -102,7 +102,7 @@ void appLoop(void)
 
 void appToggleLED(void)
 {
-  HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+  HAL_GPIO_TogglePin(STATUS_LED_GPIO_Port, STATUS_LED_Pin);
 }
 
 

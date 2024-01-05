@@ -186,7 +186,7 @@ void audioProcessData(void)
       if (ramSampleIdx >= 16000) {
         ramSampleIdx = 0;
         if (audioState == AUDIO_RECORD) {
-          HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+          HAL_GPIO_WritePin(STATUS_LED_GPIO_Port, STATUS_LED_Pin, GPIO_PIN_RESET);
           // Stop recoding audio
           HAL_I2S_DMAStop(i2sMic);
           audioPlay();
@@ -209,7 +209,7 @@ void audioProcessData(void)
 
 void audioRecord(void)
 {
-  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(STATUS_LED_GPIO_Port, STATUS_LED_Pin, GPIO_PIN_SET);
   // Start recording audio
   // Receiving 32bit frames and buffer uses 16bit data size so receive size is half buffer size
   audioState = AUDIO_RECORD;

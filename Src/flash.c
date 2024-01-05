@@ -18,7 +18,7 @@
  *  	- taking a sector index, byte data array, and number of bytes to write as parameters
  *  - Write data aligned to 32KB block (flashWriteDataBlock)
  *  	- taking a block index, byte data array, and number of bytes to write as parameters
- *  - Read data aligned to 4KB block (flashReadDataSector)
+ *  - Read data aligned to 4KB sector (flashReadDataSector)
  *  	- taking a sector index, byte data array (to fill), and number of bytes to read as parameters
  *  - Read data aligned to 32KB block (flashReadDataBlock)
  *  	- taking a block index, byte data array (to fill), and number of bytes to read as parameters

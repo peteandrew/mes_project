@@ -16,10 +16,7 @@
   ******************************************************************************
   */
 
-//  - Single state variable for audio control
 //  - Investigate improving LCD performance - increase buffer size?
-//  - Remove separate audio clip control functions
-//    - Replace calls with calls to change audio channel 1 params
 //  - Change menu options when clip has been recorded
 //    - display play and store options
 //  - Flash LED with beats
@@ -569,7 +566,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(STATUS_LED_GPIO_Port, STATUS_LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, ST7789_CS_Pin|ST7789_DC_Pin|ST7789_RST_Pin, GPIO_PIN_RESET);
@@ -577,12 +574,12 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(SPI_NSS_GPIO_Port, SPI_NSS_Pin, GPIO_PIN_SET);
 
-  /*Configure GPIO pin : LED1_Pin */
-  GPIO_InitStruct.Pin = LED1_Pin;
+  /*Configure GPIO pin : STATUS_LED_Pin */
+  GPIO_InitStruct.Pin = STATUS_LED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LED1_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(STATUS_LED_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : ST7789_CS_Pin ST7789_DC_Pin */
   GPIO_InitStruct.Pin = ST7789_CS_Pin|ST7789_DC_Pin;
